@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0">
+<title>Premier League Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a matchday programme — fixture picker up top, outcome bar + scoreline grid, then the five-season ratings table */
+:root {
+  --bg: #f2f4f1;
+  --surface: #ffffff;
+  --fg: #142019;
+  --muted: #5b6a61;
+  --line: #d9dfda;
+  --home: #0f6e6e;
+  --away: #b8691a;
+  --draw: #7d8a83;
+  --home-soft: 15, 110, 110;
+  --away-soft: 184, 105, 26;
+  --draw-soft: 125, 138, 131;
+  --on-seg: #ffffff;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --body: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1411; --surface: #152019; --fg: #e5ece7; --muted: #94a39a; --line: #26342c;
+    --home: #3fb6a8; --away: #e6a043; --draw: #8e9c94;
+    --home-soft: 63, 182, 168; --away-soft: 230, 160, 67; --draw-soft: 142, 156, 148; --on-seg: #0d1411;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1411; --surface: #152019; --fg: #e5ece7; --muted: #94a39a; --line: #26342c;
+  --home: #3fb6a8; --away: #e6a043; --draw: #8e9c94;
+  --home-soft: 63, 182, 168; --away-soft: 230, 160, 67; --draw-soft: 142, 156, 148; --on-seg: #0d1411;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 28px; }
+
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(36px, 7vw, 56px); line-height: .95; letter-spacing: .01em; margin: 0; text-transform: uppercase; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 26px; text-transform: uppercase; letter-spacing: .02em; margin: 0; }
+
+.fixture { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; display: grid; gap: 22px; }
+.pickers { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: end; }
+.picker { display: grid; gap: 6px; min-width: 0; }
+.picker label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.picker.home label { color: var(--home); }
+.picker.away label { color: var(--away); }
+select { width: 100%; font: 600 22px/1.1 var(--display); text-transform: uppercase; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; }
+.picker.home select { border-left: 4px solid var(--home); }
+.picker.away select { border-left: 4px solid var(--away); }
+select:focus-visible, button:focus-visible { outline: 2px solid var(--home); outline-offset: 2px; }
+.swap { font: 500 13px var(--mono); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 12px 10px; cursor: pointer; }
+.swap:hover { color: var(--fg); border-color: var(--muted); }
+
+.score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; text-align: center; }
+.xg { display: grid; gap: 2px; }
+.xg .num { font-family: var(--display); font-weight: 700; font-size: clamp(44px, 10vw, 72px); line-height: 1; font-variant-numeric: tabular-nums; }
+.xg.home .num { color: var(--home); }
+.xg.away .num { color: var(--away); }
+.xg .cap { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.likely { display: grid; gap: 2px; padding-inline: 8px; }
+.likely .num { font-family: var(--display); font-weight: 600; font-size: 28px; line-height: 1; }
+.likely .cap { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+.bar { display: flex; height: 38px; border-radius: 4px; overflow: hidden; }
+.seg { display: flex; align-items: center; padding-inline: 10px; color: var(--on-seg); font: 600 15px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 0; transition: flex-basis .35s ease; }
+.seg.h { background: var(--home); }
+.seg.d { background: var(--draw); justify-content: center; }
+.seg.a { background: var(--away); justify-content: flex-end; }
+.legend { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); margin-top: 6px; flex-wrap: wrap; }
+.legend b { color: var(--fg); font-weight: 600; }
+
+.grid-wrap { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 20px; align-items: start; }
+.grid-scroll { overflow-x: auto; }
+table.sl { border-collapse: separate; border-spacing: 3px; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+table.sl th { font-weight: 500; color: var(--muted); padding: 2px 4px; }
+table.sl th.ax-h { color: var(--home); }
+table.sl th.ax-a { color: var(--away); }
+table.sl td { width: 50px; height: 34px; text-align: center; border-radius: 3px; color: var(--fg); }
+table.sl td.top { outline: 2px solid var(--fg); outline-offset: -2px; font-weight: 600; }
+.grid-note { display: grid; gap: 10px; font-size: 14px; color: var(--muted); max-width: 38ch; }
+.grid-note p { margin: 0; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+
+.ratings { display: grid; gap: 12px; }
+.ratings-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.ratings-head p { margin: 0; color: var(--muted); font-size: 13px; }
+.table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+table.rt { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+table.rt th, table.rt td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+table.rt th:first-child, table.rt td:first-child { text-align: left; }
+table.rt td:first-child { font-weight: 600; }
+table.rt th { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+table.rt th button { all: unset; cursor: pointer; }
+table.rt th button:hover, table.rt th.on button { color: var(--fg); }
+table.rt th.on button::after { content: " ↓"; }
+table.rt th.on.asc button::after { content: " ↑"; }
+table.rt tbody tr:last-child td { border-bottom: 0; }
+table.rt tr.sel-h td:first-child { box-shadow: inset 4px 0 var(--home); }
+table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
+.pill { font: 500 11px var(--mono); padding: 2px 6px; border-radius: 3px; background: rgba(var(--draw-soft), .18); color: var(--muted); margin-left: 6px; }
+
+.how { display: grid; gap: 10px; }
+.how ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 70ch; }
+.how p { margin: 0; color: var(--muted); font-size: 13px; max-width: 70ch; }
+
+.scorers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; border-top: 1px solid var(--line); padding-top: 20px; }
+.scorers-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.scorers-head h3 { font-family: var(--display); font-weight: 600; font-size: 22px; text-transform: uppercase; letter-spacing: .02em; margin: 0; }
+.scorers-head p { margin: 0; color: var(--muted); font-size: 13px; max-width: 52ch; }
+.sc-col { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.sc-team { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.sc-col.home .sc-team { color: var(--home); }
+.sc-col.away .sc-team { color: var(--away); }
+.sc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sc-row { display: grid; grid-template-columns: minmax(0, 1fr) 54px; gap: 4px 10px; align-items: center; }
+.sc-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-pct { font: 600 15px var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.sc-track { grid-column: 1 / -1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.sc-fill { height: 100%; border-radius: 3px; transition: width .35s ease; }
+.sc-col.home .sc-fill { background: var(--home); }
+.sc-col.away .sc-fill { background: var(--away); }
+.sc-sub { grid-column: 1 / -1; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sc-none { margin: 0; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 640px) {
+  .scorers { grid-template-columns: 1fr; }
+  .pickers { grid-template-columns: 1fr; }
+  .swap { justify-self: start; }
+  .grid-wrap { grid-template-columns: 1fr; }
+  .seg { font-size: 13px; padding-inline: 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .seg, .sc-fill { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Five seasons · 2021–22 to 2025–26 · 1,900 matches</div>
+    <h1>Premier League Predictor</h1>
+    <p class="lede">Pick a home team and an away team to see each side's expected goals, the chance of a home win, draw or away win, how likely every scoreline is, and who is most likely to score.</p>
+  </header>
+
+  <section class="fixture" aria-label="Match prediction">
+    <div class="pickers">
+      <div class="picker home">
+        <label for="home">Home</label>
+        <select id="home"></select>
+      </div>
+      <button class="swap" id="swap" type="button" aria-label="Swap home and away teams">⇄ Swap</button>
+      <div class="picker away">
+        <label for="away">Away</label>
+        <select id="away"></select>
+      </div>
+    </div>
+
+    <div class="score" aria-live="polite">
+      <div class="xg home"><span class="num" id="hxg">–</span><span class="cap">Expected goals</span></div>
+      <div class="likely"><span class="num" id="likely">–</span><span class="cap" id="likelyCap">Most likely score</span></div>
+      <div class="xg away"><span class="num" id="axg">–</span><span class="cap">Expected goals</span></div>
+    </div>
+
+    <div>
+      <div class="bar" role="img" id="bar" aria-label="">
+        <div class="seg h" id="segH"></div>
+        <div class="seg d" id="segD"></div>
+        <div class="seg a" id="segA"></div>
+      </div>
+      <div class="legend">
+        <span id="legH"></span><span>Draw</span><span id="legA"></span>
+      </div>
+    </div>
+
+    <div class="grid-wrap">
+      <div class="grid-scroll"><table class="sl" id="grid" aria-label="Chance of each scoreline"></table></div>
+      <div class="grid-note">
+        <p><b style="color:var(--fg)">Every scoreline, 0–0 to 5–5.</b> Rows are home goals, columns are away goals. The outlined cell is the most likely score.</p>
+        <p><span class="key" style="background:var(--home)"></span>Below the diagonal: home wins<br>
+           <span class="key" style="background:var(--draw)"></span>On the diagonal: draws<br>
+           <span class="key" style="background:var(--away)"></span>Above the diagonal: away wins</p>
+        <p>Adding up each region gives the three percentages in the bar above.</p>
+      </div>
+    </div>
+
+    <div class="scorers" aria-live="polite">
+      <div class="scorers-head">
+        <h3>Likely goalscorers</h3>
+        <p>Chance each player scores at least once in this match, based on their expected goals (xG) and minutes so far in 2026–27.</p>
+      </div>
+      <div class="sc-col home" id="scH"></div>
+      <div class="sc-col away" id="scA"></div>
+    </div>
+  </section>
+
+  <section class="ratings">
+    <div class="ratings-head">
+      <h2>Team ratings</h2>
+      <p>Click a column to sort. Attack and defense of 1.00 = league average.</p>
+    </div>
+    <div class="table-scroll">
+      <table class="rt" id="rt">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Ratings.</b> Each team's goals scored and conceded per match are compared with the league average of 1.46. An attack rating of 1.58 means scoring 58% more than average. For defense, lower is better.</li>
+      <li><b>Expected goals.</b> A team's attack rating × the opponent's defense rating × the league average, with home teams given a 15% boost.</li>
+      <li><b>Probabilities.</b> A Poisson distribution turns each side's expected goals into the chance of scoring 0, 1, 2 or more, and combining both sides gives every scoreline.</li>
+      <li><b>Goalscorers.</b> The team's expected goals are split among its players by each one's xG per 90 minutes this season and their average minutes per match. A player's chance of scoring is 1 minus the chance they score zero.</li>
+    </ol>
+    <p>Teams marked "1 season" have only 38 matches of Premier League data, so their ratings are less reliable. The model uses five-season averages, so it doesn't reflect recent form, injuries or transfers. Coventry and Hull have no Premier League matches in this data, so they use the average of teams in their first season up. Goalscorer odds assume each player plays his usual minutes; they don't know about injuries or rotation, and early-season numbers are based on only a handful of matches. Five players who changed clubs mid-season are left out.</p>
+  </section>
+</div>
+
+<script src="players_data.js"></script>
+<script>
+(function () {
+  // [team, matches, wins, draws, losses, points, goals scored/match, goals conceded/match]
+  var RAW = [
+    ["Man City",190,129,35,26,422,2.31,0.91],["Arsenal",190,122,35,33,401,2.00,0.95],
+    ["Liverpool",190,113,46,31,385,2.13,1.09],["Aston Villa",190,89,38,63,305,1.54,1.37],
+    ["Man United",190,88,42,60,306,1.50,1.38],["Newcastle",190,84,43,63,295,1.67,1.36],
+    ["Chelsea",190,84,50,56,302,1.65,1.25],["Tottenham",190,81,33,76,276,1.71,1.51],
+    ["Brighton",190,72,59,59,275,1.51,1.39],["Brentford",190,68,49,73,253,1.49,1.45],
+    ["West Ham",190,62,44,84,230,1.34,1.62],["Crystal Palace",190,59,63,68,240,1.26,1.34],
+    ["Fulham",152,58,31,63,205,1.39,1.44],["Everton",190,56,52,82,220,1.08,1.41],
+    ["Wolves",190,54,38,98,200,1.05,1.59],["Bournemouth",152,52,44,56,200,1.36,1.57],
+    ["Nott'm Forest",152,48,39,65,183,1.27,1.53],["Leicester",114,29,24,61,111,1.28,1.82],
+    ["Leeds",114,27,35,52,116,1.22,1.87],["Southampton",114,17,26,71,77,0.92,1.98],
+    ["Burnley",114,16,33,65,81,0.99,1.81],["Sunderland",38,14,12,12,54,1.11,1.26],
+    ["Watford",38,6,5,27,23,0.89,2.03],["Luton",38,6,8,24,26,1.37,2.24],
+    ["Norwich",38,5,7,26,22,0.61,2.21],["Ipswich",38,4,10,24,22,0.95,2.16],
+    ["Sheffield United",38,3,7,28,16,0.92,2.74]
+  ];
+  var PROMOTED = { gf: 0.975, ga: 2.107 }; // average of the six teams with one season in this data
+  var HOME_BOOST = 1.15;
+  var totalM = 0, totalS = 0;
+  RAW.forEach(function (r) { totalM += r[1]; totalS += r[1] * r[6]; });
+  var AVG = totalS / totalM;
+
+  var teams = RAW.map(function (r) {
+    return { name: r[0], m: r[1], w: r[2], d: r[3], l: r[4], pts: r[5], gf: r[6], ga: r[7],
+             ppm: r[5] / r[1], gd: r[6] - r[7], att: r[6] / AVG, def: r[7] / AVG };
+  });
+  ["Coventry", "Hull"].forEach(function (n) {
+    teams.push({ name: n, m: 0, gf: PROMOTED.gf, ga: PROMOTED.ga, att: PROMOTED.gf / AVG, def: PROMOTED.ga / AVG, est: true });
+  });
+  var byName = {}; teams.forEach(function (t) { byName[t.name] = t; });
+
+  var homeSel = document.getElementById("home"), awaySel = document.getElementById("away");
+  [homeSel, awaySel].forEach(function (sel) {
+    var cur = document.createElement("optgroup"), old = document.createElement("optgroup");
+    cur.label = "2026–27 season"; old.label = "Other recent teams";
+    teams.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (t) {
+      (PLAYERS[t.name] ? cur : old).appendChild(new Option(t.name + (t.est ? " (estimate)" : ""), t.name));
+    });
+    sel.appendChild(cur); sel.appendChild(old);
+  });
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem("plp-fixture") || "null"); } catch (e) {}
+  homeSel.value = saved && byName[saved.h] ? saved.h : "Man United";
+  awaySel.value = saved && byName[saved.a] ? saved.a : "Arsenal";
+
+  function pmf(lam, max) {
+    var out = [Math.exp(-lam)];
+    for (var k = 1; k <= max; k++) out.push(out[k - 1] * lam / k);
+    return out;
+  }
+  function pct(x) { return (x * 100).toFixed(1) + "%"; }
+
+  function predict() {
+    var h = byName[homeSel.value], a = byName[awaySel.value];
+    if (h === a) {
+      var others = teams.filter(function (t) { return t !== h; });
+      a = others[0]; awaySel.value = a.name;
+    }
+    var hxg = h.att * a.def * AVG * HOME_BOOST;
+    var axg = a.att * h.def * AVG / HOME_BOOST;
+    var N = 10, ph = pmf(hxg, N), pa = pmf(axg, N);
+    var H = 0, D = 0, A = 0, best = 0, bi = 0, bj = 0;
+    for (var i = 0; i <= N; i++) for (var j = 0; j <= N; j++) {
+      var p = ph[i] * pa[j];
+      if (i > j) H += p; else if (i === j) D += p; else A += p;
+      if (p > best) { best = p; bi = i; bj = j; }
+    }
+    var s = H + D + A; H /= s; D /= s; A /= s;
+
+    document.getElementById("hxg").textContent = hxg.toFixed(2);
+    document.getElementById("axg").textContent = axg.toFixed(2);
+    document.getElementById("likely").textContent = bi + "–" + bj;
+    document.getElementById("likelyCap").textContent = "Most likely score · " + pct(best);
+    setSeg("segH", H); setSeg("segD", D); setSeg("segA", A);
+    document.getElementById("legH").innerHTML = "<b>" + esc(h.name) + "</b> win";
+    document.getElementById("legA").innerHTML = "<b>" + esc(a.name) + "</b> win";
+    document.getElementById("bar").setAttribute("aria-label",
+      h.name + " win " + pct(H) + ", draw " + pct(D) + ", " + a.name + " win " + pct(A));
+    drawGrid(h, a, ph, pa, bi, bj, best);
+    document.getElementById("scH").innerHTML = scorerList(h, hxg);
+    document.getElementById("scA").innerHTML = scorerList(a, axg);
+    markRows(h.name, a.name);
+    try { localStorage.setItem("plp-fixture", JSON.stringify({ h: h.name, a: a.name })); } catch (e) {}
+  }
+  function scorerList(t, xg) {
+    var P = PLAYERS[t.name];
+    var head = "<div class='sc-team'>" + esc(t.name) + " · " + xg.toFixed(2) + " expected goals</div>";
+    if (!P) return head + "<p class='sc-none'>No 2026–27 player data. " + esc(t.name) + " isn't in the league this season.</p>";
+    var rows = P.p.slice(0, 6).map(function (r) {
+      var prob = 1 - Math.exp(-xg * r[1] / P.sum);
+      return "<li class='sc-row'><span class='sc-name' title='" + esc(r[0]) + "'>" + esc(r[0]) + "</span>" +
+        "<span class='sc-pct'>" + Math.round(prob * 100) + "%</span>" +
+        "<span class='sc-track'><span class='sc-fill' style='display:block;width:" + (prob * 100).toFixed(1) + "%'></span></span>" +
+        "<span class='sc-sub'>" + r[2] + (r[2] === 1 ? " goal" : " goals") + " · " + r[3].toFixed(2) + " xG · " + r[4] + " min in " + r[5] + (r[5] === 1 ? " match" : " matches") + "</span></li>";
+    }).join("");
+    return head + "<ol class='sc-list'>" + rows + "</ol>";
+  }
+  function setSeg(id, v) {
+    var el = document.getElementById(id);
+    el.style.flex = "0 0 " + (v * 100) + "%";
+    el.textContent = v >= 0.08 ? Math.round(v * 100) + "%" : "";
+  }
+  function esc(s) { return s.replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  function drawGrid(h, a, ph, pa, bi, bj, best) {
+    var M = 5, html = "<tr><th></th><th colspan='" + (M + 1) + "' class='ax-a'>" + esc(a.name) + " goals →</th></tr><tr><th class='ax-h'>Home ↓</th>";
+    for (var j = 0; j <= M; j++) html += "<th class='ax-a'>" + j + "</th>";
+    html += "</tr>";
+    for (var i = 0; i <= M; i++) {
+      html += "<tr><th class='ax-h'>" + i + "</th>";
+      for (var j2 = 0; j2 <= M; j2++) {
+        var p = ph[i] * pa[j2];
+        var tone = i > j2 ? "--home-soft" : (i === j2 ? "--draw-soft" : "--away-soft");
+        var alpha = Math.min(0.9, 0.06 + (p / best) * 0.7);
+        html += "<td" + (i === bi && j2 === bj ? " class='top'" : "") +
+                " style='background: rgba(var(" + tone + ")," + alpha.toFixed(2) + ")' title='" +
+                i + "–" + j2 + ": " + pct(p) + "'>" + (p >= 0.0005 ? (p * 100).toFixed(1) : "0") + "</td>";
+      }
+      html += "</tr>";
+    }
+    document.getElementById("grid").innerHTML = html;
+  }
+
+  // Ratings table
+  var cols = [
+    { k: "name", t: "Team" }, { k: "m", t: "P" }, { k: "w", t: "W" }, { k: "d", t: "D" }, { k: "l", t: "L" },
+    { k: "pts", t: "Pts" }, { k: "ppm", t: "Pts/M", f: 2 }, { k: "gf", t: "GF/M", f: 2 }, { k: "ga", t: "GA/M", f: 2 },
+    { k: "gd", t: "GD/M", f: 2, sign: true }, { k: "att", t: "Attack", f: 2 }, { k: "def", t: "Defense", f: 2 }
+  ];
+  var sortKey = "ppm", asc = false;
+  var headRow = document.querySelector("#rt thead tr"), body = document.querySelector("#rt tbody");
+  cols.forEach(function (c) {
+    var th = document.createElement("th"), b = document.createElement("button");
+    b.type = "button"; b.textContent = c.t;
+    b.addEventListener("click", function () {
+      if (sortKey === c.k) asc = !asc;
+      else { sortKey = c.k; asc = (c.k === "name" || c.k === "ga" || c.k === "def" || c.k === "l"); }
+      renderTable(); markRows(homeSel.value, awaySel.value);
+    });
+    th.appendChild(b); th.dataset.k = c.k; headRow.appendChild(th);
+  });
+  function renderTable() {
+    var rows = teams.filter(function (t) { return !t.est; }).sort(function (x, y) {
+      var a = x[sortKey], b = y[sortKey];
+      var r = typeof a === "string" ? a.localeCompare(b) : a - b;
+      return asc ? r : -r;
+    });
+    body.innerHTML = rows.map(function (t) {
+      return "<tr data-team='" + esc(t.name) + "'>" + cols.map(function (c) {
+        var v = t[c.k];
+        if (c.k === "name") return "<td>" + esc(v) + (t.m === 38 ? "<span class='pill'>1 season</span>" : "") + "</td>";
+        var s = c.f ? v.toFixed(c.f) : v;
+        if (c.sign && v > 0) s = "+" + s;
+        return "<td>" + s + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    Array.prototype.forEach.call(headRow.children, function (th) {
+      th.classList.toggle("on", th.dataset.k === sortKey);
+      th.classList.toggle("asc", th.dataset.k === sortKey && asc);
+    });
+  }
+  function markRows(h, a) {
+    Array.prototype.forEach.call(body.children, function (tr) {
+      tr.classList.toggle("sel-h", tr.dataset.team === h);
+      tr.classList.toggle("sel-a", tr.dataset.team === a);
+    });
+  }
+
+  homeSel.addEventListener("change", predict);
+  awaySel.addEventListener("change", function () {
+    if (awaySel.value === homeSel.value) {
+      var others = teams.filter(function (t) { return t.name !== awaySel.value; });
+      homeSel.value = others[0].name;
+    }
+    predict();
+  });
+  document.getElementById("swap").addEventListener("click", function () {
+    var t = homeSel.value; homeSel.value = awaySel.value; awaySel.value = t; predict();
+  });
+
+  renderTable();
+  predict();
+})();
+</script>
+
+</body>
+</html>
