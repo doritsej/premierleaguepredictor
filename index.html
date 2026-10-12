@@ -149,7 +149,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Five seasons · 2021–22 to 2025–26 · 1,900 matches</div>
+    <div class="eyebrow" id="eyebrow">Weighted toward recent form</div>
     <h1>Premier League Predictor</h1>
     <p class="lede">Pick a home team and an away team to see each side's expected goals, the chance of a home win, draw or away win, how likely every scoreline is, and who is most likely to score.</p>
   </header>
@@ -198,7 +198,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
     <div class="scorers" aria-live="polite">
       <div class="scorers-head">
         <h3>Likely goalscorers</h3>
-        <p>Chance each player scores at least once in this match, based on their expected goals (xG) and minutes so far in 2026–27.</p>
+        <p>Chance each player scores at least once in this match, based on their expected goals (xG) this season and in past seasons, and their minutes so far this season.</p>
       </div>
       <div class="sc-col home" id="scH"></div>
       <div class="sc-col away" id="scA"></div>
@@ -208,7 +208,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
   <section class="ratings">
     <div class="ratings-head">
       <h2>Team ratings</h2>
-      <p>Click a column to sort. Attack and defense of 1.00 = league average.</p>
+      <p>Click a column to sort. Record covers every season in the data; goals per match lean toward recent seasons. Attack and defense of 1.00 = league average.</p>
     </div>
     <div class="table-scroll">
       <table class="rt" id="rt">
@@ -221,56 +221,49 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
   <section class="how">
     <h2>How it works</h2>
     <ol>
-      <li><b>Ratings.</b> Each team's goals scored and conceded per match are compared with the league average of 1.46. An attack rating of 1.58 means scoring 58% more than average. For defense, lower is better.</li>
+      <li><b>Ratings.</b> Each team's goals scored and conceded per match are compared with the league average of <span id="avgGoals">–</span>. An attack rating of 1.50 means scoring 50% more than average. For defense, lower is better.</li>
+      <li><b>Recent form counts more.</b> Past seasons are combined into a track record where last season counts fully and each earlier season counts half as much as the one after it. That track record is worth <span id="teamHist">19</span> matches, and every match this season counts in full on top, so the current season matters more as it goes on. On top of that, each team's <span id="recentN">5</span> most recent matches <span id="recentX">count double</span>, so the model reacts to hot and cold streaks. The same weighting applies to players' xG and minutes.</li>
       <li><b>Expected goals.</b> A team's attack rating × the opponent's defense rating × the league average, with home teams given a 15% boost.</li>
       <li><b>Probabilities.</b> A Poisson distribution turns each side's expected goals into the chance of scoring 0, 1, 2 or more, and combining both sides gives every scoreline.</li>
-      <li><b>Goalscorers.</b> The team's expected goals are split among its players by each one's xG per 90 minutes this season and their average minutes per match. A player's chance of scoring is 1 minus the chance they score zero.</li>
+      <li><b>Goalscorers.</b> The team's expected goals are split among its players by each one's xG per 90 minutes and their average minutes per match this season. A player's xG per 90 blends this season with his record in previous seasons (worth up to <span id="playerHist">5</span> matches, recent seasons counting more), so early-season odds don't rest on a handful of games alone. A player's chance of scoring is 1 minus the chance he scores zero.</li>
     </ol>
-    <p>Teams marked "1 season" have only 38 matches of Premier League data, so their ratings are less reliable. The model uses five-season averages, so it doesn't reflect recent form, injuries or transfers. Coventry and Hull have no Premier League matches in this data, so they use the average of teams in their first season up. Goalscorer odds assume each player plays his usual minutes; they don't know about injuries or rotation, and early-season numbers are based on only a handful of matches. Five players who changed clubs mid-season are left out.</p>
+    <p>Teams with no Premier League matches in this data start from the average first season of promoted teams, and their own results take over as they play. Players who changed clubs this season count only for their new club, measured from when they arrived. The model doesn't know about injuries, suspensions or rotation, and a player's past seasons may reflect a different role or club.</p>
   </section>
 </div>
 
 <script src="players_data.js"></script>
 <script>
 (function () {
-  // [team, matches, wins, draws, losses, points, goals scored/match, goals conceded/match]
-  var RAW = [
-    ["Man City",190,129,35,26,422,2.31,0.91],["Arsenal",190,122,35,33,401,2.00,0.95],
-    ["Liverpool",190,113,46,31,385,2.13,1.09],["Aston Villa",190,89,38,63,305,1.54,1.37],
-    ["Man United",190,88,42,60,306,1.50,1.38],["Newcastle",190,84,43,63,295,1.67,1.36],
-    ["Chelsea",190,84,50,56,302,1.65,1.25],["Tottenham",190,81,33,76,276,1.71,1.51],
-    ["Brighton",190,72,59,59,275,1.51,1.39],["Brentford",190,68,49,73,253,1.49,1.45],
-    ["West Ham",190,62,44,84,230,1.34,1.62],["Crystal Palace",190,59,63,68,240,1.26,1.34],
-    ["Fulham",152,58,31,63,205,1.39,1.44],["Everton",190,56,52,82,220,1.08,1.41],
-    ["Wolves",190,54,38,98,200,1.05,1.59],["Bournemouth",152,52,44,56,200,1.36,1.57],
-    ["Nott'm Forest",152,48,39,65,183,1.27,1.53],["Leicester",114,29,24,61,111,1.28,1.82],
-    ["Leeds",114,27,35,52,116,1.22,1.87],["Southampton",114,17,26,71,77,0.92,1.98],
-    ["Burnley",114,16,33,65,81,0.99,1.81],["Sunderland",38,14,12,12,54,1.11,1.26],
-    ["Watford",38,6,5,27,23,0.89,2.03],["Luton",38,6,8,24,26,1.37,2.24],
-    ["Norwich",38,5,7,26,22,0.61,2.21],["Ipswich",38,4,10,24,22,0.95,2.16],
-    ["Sheffield United",38,3,7,28,16,0.92,2.74]
-  ];
-  var PROMOTED = { gf: 0.975, ga: 2.107 }; // average of the six teams with one season in this data
+  if (typeof TEAMS === "undefined" || typeof PLAYERS === "undefined") {
+    document.querySelector(".wrap").insertAdjacentHTML("afterbegin",
+      "<p style='color:var(--away);font-weight:600'>The data file players_data.js didn't load. " +
+      "Run update_players.py and keep players_data.js in the same folder as this page.</p>");
+    return;
+  }
+  var AVG = META.avg;
   var HOME_BOOST = 1.15;
-  var totalM = 0, totalS = 0;
-  RAW.forEach(function (r) { totalM += r[1]; totalS += r[1] * r[6]; });
-  var AVG = totalS / totalM;
-
-  var teams = RAW.map(function (r) {
-    return { name: r[0], m: r[1], w: r[2], d: r[3], l: r[4], pts: r[5], gf: r[6], ga: r[7],
-             ppm: r[5] / r[1], gd: r[6] - r[7], att: r[6] / AVG, def: r[7] / AVG };
+  var teams = TEAMS.map(function (t) {
+    var o = {}; for (var k in t) o[k] = t[k];
+    o.ppm = t.m ? t.pts / t.m : 0; o.gd = t.gf - t.ga;
+    return o;
   });
-  ["Coventry", "Hull"].forEach(function (n) {
-    teams.push({ name: n, m: 0, gf: PROMOTED.gf, ga: PROMOTED.ga, att: PROMOTED.gf / AVG, def: PROMOTED.ga / AVG, est: true });
-  });
+  document.getElementById("eyebrow").textContent =
+    META.first + " to " + META.current + " · " + META.matches.toLocaleString() + " matches · weighted toward recent form";
+  document.getElementById("avgGoals").textContent = AVG.toFixed(2);
+  document.getElementById("teamHist").textContent = META.teamHistory;
+  document.getElementById("playerHist").textContent = META.playerHistory;
+  document.getElementById("recentN").textContent = META.recentMatches;
+  var rx = 1 + META.recentBoost;
+  document.getElementById("recentX").textContent =
+    META.recentBoost > 0 ? (rx === 2 ? "count double" : "count " + rx + "× as much") : "count the same as the rest";
   var byName = {}; teams.forEach(function (t) { byName[t.name] = t; });
 
   var homeSel = document.getElementById("home"), awaySel = document.getElementById("away");
   [homeSel, awaySel].forEach(function (sel) {
     var cur = document.createElement("optgroup"), old = document.createElement("optgroup");
-    cur.label = "2026–27 season"; old.label = "Other recent teams";
+    cur.label = META.current + " season"; old.label = "Other recent teams";
     teams.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (t) {
-      (PLAYERS[t.name] ? cur : old).appendChild(new Option(t.name + (t.est ? " (estimate)" : ""), t.name));
+      (t.current ? cur : old).appendChild(new Option(t.name, t.name));
     });
     sel.appendChild(cur); sel.appendChild(old);
   });
@@ -321,7 +314,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
   function scorerList(t, xg) {
     var P = PLAYERS[t.name];
     var head = "<div class='sc-team'>" + esc(t.name) + " · " + xg.toFixed(2) + " expected goals</div>";
-    if (!P) return head + "<p class='sc-none'>No 2026–27 player data. " + esc(t.name) + " isn't in the league this season.</p>";
+    if (!P) return head + "<p class='sc-none'>No " + META.current + " player data. " + esc(t.name) + " isn't in the league this season.</p>";
     var rows = P.p.slice(0, 6).map(function (r) {
       var prob = 1 - Math.exp(-xg * r[1] / P.sum);
       return "<li class='sc-row'><span class='sc-name' title='" + esc(r[0]) + "'>" + esc(r[0]) + "</span>" +
@@ -376,7 +369,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
     th.appendChild(b); th.dataset.k = c.k; headRow.appendChild(th);
   });
   function renderTable() {
-    var rows = teams.filter(function (t) { return !t.est; }).sort(function (x, y) {
+    var rows = teams.slice().sort(function (x, y) {
       var a = x[sortKey], b = y[sortKey];
       var r = typeof a === "string" ? a.localeCompare(b) : a - b;
       return asc ? r : -r;
@@ -384,7 +377,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
     body.innerHTML = rows.map(function (t) {
       return "<tr data-team='" + esc(t.name) + "'>" + cols.map(function (c) {
         var v = t[c.k];
-        if (c.k === "name") return "<td>" + esc(v) + (t.m === 38 ? "<span class='pill'>1 season</span>" : "") + "</td>";
+        if (c.k === "name") return "<td>" + esc(v) + (t.isNew ? "<span class='pill'>new</span>" : (t.seasons === 1 ? "<span class='pill'>1 season</span>" : "")) + "</td>";
         var s = c.f ? v.toFixed(c.f) : v;
         if (c.sign && v > 0) s = "+" + s;
         return "<td>" + s + "</td>";
