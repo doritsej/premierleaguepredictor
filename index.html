@@ -151,7 +151,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
 .wrap { grid-template-columns: minmax(0, 1fr); }
 
 /* Tabs */
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; }
 .tab { all: unset; cursor: pointer; font: 600 21px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; color: var(--muted); padding: 10px 14px 12px; border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .tab:hover { color: var(--fg); }
 .tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--home); }
@@ -418,7 +418,7 @@ table.cmp tbody tr:last-child td { border-bottom: 0; }
         <li><b>Fit score.</b> Each candidate is ranked the same way on each stat. Stats where the team is weakest count for more, so a striker who fixes a team's biggest gap scores higher than one who is only strong where the team is already good. The score runs from 0 to 100.</li>
         <li><b>Small samples.</b> Rates for players with few minutes are pulled toward the average for their position before ranking, so two goals in 150 minutes doesn't top the list. The table shows each player's actual rate.</li>
       </ol>
-      <p>Defensive stats (tackles, clearances, blocks, interceptions, recoveries, saves) and ages come from Fantasy Premier League, so they exist only for Premier League players. Players in other leagues are ranked on the stats they have. Positions are broad (goalkeeper, defender, midfielder, forward), so a winger and a holding midfielder can share a list. Early in the season every number rests on a handful of matches.</p>
+      <p>Defensive stats (tackles, clearances, blocks, interceptions, recoveries, saves) come from Fantasy Premier League, so they exist only for Premier League players. Players in other leagues are ranked on the stats they have. Ages come from Fantasy Premier League and Transfermarkt. A few players new to these leagues have no age yet, and the age filter hides them. Positions are broad (goalkeeper, defender, midfielder, forward), so a winger and a holding midfielder can share a list. Early in the season every number rests on a handful of matches.</p>
     </section>
   </div>
 
