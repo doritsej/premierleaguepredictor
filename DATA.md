@@ -23,6 +23,7 @@ The Scouting tab reads `data/players.json`. A GitHub Action rebuilds that file e
 
 - **Understat** for all five leagues: minutes, matches, goals, assists, xG, xA, non-penalty xG, shots and key passes.
 - **Fantasy Premier League** data, mirrored on GitHub by [FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights) and [vaastav/Fantasy-Premier-League](https://github.com/vaastav/Fantasy-Premier-League): ages, positions, starts, tackles, clearances/blocks/interceptions, recoveries, saves, clean sheets and goals conceded for Premier League players. These are matched to Understat by name and club.
+- **Transfermarkt** player list from [transfermarkt-datasets](https://github.com/dcaribou/transfermarkt-datasets): birth dates for players in all five leagues, used for anyone still missing an age. Matched by name, with league and club breaking ties; unclear matches are left blank. This dataset stopped updating in July 2026, so players new to these leagues may have no age. If it can't be downloaded, the run carries on without it.
 
 If Understat fails for the Premier League, the script falls back to the Fantasy Premier League data alone.
 
@@ -37,7 +38,8 @@ The two most likely causes:
 
 ## Known gaps
 
-- Ages and defensive stats exist only for Premier League players. Adding ages for the other four leagues needs another source, such as Transfermarkt squad pages.
+- Defensive stats exist only for Premier League players.
+- Ages for players who joined these leagues after July 2026 may be missing until a fresher birth-date source is added, such as Transfermarkt squad pages.
 - Positions for the other four leagues come from Understat's position codes, which are broad (GK, D, M, F).
 - Scraping these sites is fine for a personal or portfolio project. A public product, especially a paid one, should use a licensed data provider.
 
