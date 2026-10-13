@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import gzip
 import html
 import io
 import json
@@ -36,6 +37,7 @@ import sys
 import time
 import unicodedata
 import urllib.request
+import zlib
 from pathlib import Path
 
 FIELDS = [
@@ -80,15 +82,28 @@ class LeagueError(Exception):
 
 # ---------------------------------------------------------------- helpers
 
+def decode_body(raw: bytes, encoding: str = "") -> str:
+    """Decompress gzip/deflate responses (Understat sends gzip even unasked) and decode as UTF-8."""
+    encoding = (encoding or "").lower()
+    if raw[:2] == b"\x1f\x8b" or encoding == "gzip":
+        raw = gzip.decompress(raw)
+    elif encoding == "deflate":
+        try:
+            raw = zlib.decompress(raw)
+        except zlib.error:
+            raw = zlib.decompress(raw, -zlib.MAX_WBITS)
+    return raw.decode("utf-8")
+
+
 def http_get(url: str, headers: dict | None = None, retries: int = 3) -> str:
-    h = {"User-Agent": UA, "Accept": "*/*"}
+    h = {"User-Agent": UA, "Accept": "*/*", "Accept-Encoding": "gzip"}
     h.update(headers or {})
     last = None
     for attempt in range(retries):
         try:
             req = urllib.request.Request(url, headers=h)
             with urllib.request.urlopen(req, timeout=60) as r:
-                return r.read().decode("utf-8")
+                return decode_body(r.read(), r.headers.get("Content-Encoding", ""))
         except Exception as e:  # noqa: BLE001 - report whatever went wrong
             last = e
             time.sleep(2 * (attempt + 1))
@@ -149,10 +164,14 @@ def fetch_understat(code: str, season: int, get=http_get) -> list:
     try:
         body = get(f"https://understat.com/getLeagueData/{code}/{season}",
                    {"X-Requested-With": "XMLHttpRequest", "Referer": page_url})
-        players = json.loads(body)["players"]
+        data = json.loads(body)
+        players = data.get("players") if isinstance(data, dict) else None
+        if isinstance(players, dict):  # some responses key players by id
+            players = list(players.values())
         if players:
             return players
-        errors.append("JSON endpoint returned no players")
+        keys = list(data)[:10] if isinstance(data, dict) else type(data).__name__
+        errors.append(f"JSON endpoint returned no players (got: {keys})")
     except Exception as e:  # noqa: BLE001
         errors.append(f"JSON endpoint: {e}")
     try:
