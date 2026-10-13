@@ -69,12 +69,22 @@ TEAM_NAMES = {
 
 FPL_CORE = "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/{season}"
 FPL_VAASTAV = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/{season}"
+# Transfermarkt player list from github.com/dcaribou/transfermarkt-datasets (birth dates, clubs).
+# It stopped updating in July 2026, but birth dates don't change, so it still covers most players.
+TM_PLAYERS = "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/players.csv.gz"
+TM_COMPETITIONS = {"Premier League": "GB1", "La Liga": "ES1", "Bundesliga": "L1", "Serie A": "IT1", "Ligue 1": "FR1"}
+CLUB_FILLER = {"fc", "cf", "ac", "as", "sc", "ss", "us", "ssc", "afc", "club", "de", "di", "calcio",
+               "football", "futbol", "the", "and", "real", "rc", "ca", "cd", "ud", "sd", "vfb", "vfl",
+               "tsg", "sv", "fsv", "bv", "olympique", "stade", "racing"}
 UA = "Mozilla/5.0 (compatible; premier-league-predictor data refresh)"
 
 # Checks
 MIN_PLAYERS = 150            # players with minutes in a league
 MAX_MINUTES_DROP_SHARE = 0.05  # share of returning players whose minutes went down
 MINUTES_TOLERANCE = 5          # smaller drops are treated as corrections, not resets
+
+
+LEAGUE_NAMES = [name for name, _ in LEAGUES.values()]
 
 
 class LeagueError(Exception):
@@ -308,6 +318,83 @@ def merge_fpl(us_rows: list[dict], fpl_rows: list[dict]) -> tuple[list[dict], in
     return us_rows, matched
 
 
+# ---------------------------------------------------------------- ages (Transfermarkt)
+
+def fetch_transfermarkt(get=http_get) -> list[dict]:
+    """Players with birth dates. The file is gzipped CSV; http_get decompresses it."""
+    out = []
+    for r in csv.DictReader(io.StringIO(get(TM_PLAYERS))):
+        dob = (r.get("date_of_birth") or "")[:10]
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", dob):
+            continue
+        try:
+            last_season = int(float(r.get("last_season") or 0))
+        except ValueError:
+            last_season = 0
+        first, last = r.get("first_name") or "", r.get("last_name") or ""
+        out.append({"id": r.get("player_id") or f"{first} {last} {dob}",
+                    "name": r.get("name") or f"{first} {last}".strip(),
+                    "first": first, "last": last, "dob": dob, "last_season": last_season,
+                    "comp": r.get("current_club_domestic_competition_id") or "",
+                    "club": r.get("current_club_name") or ""})
+    if not out:
+        raise LeagueError("Transfermarkt player list had no birth dates (columns may have changed)")
+    return out
+
+
+def age_on(dob: str, today: dt.date) -> int:
+    b = dt.date.fromisoformat(dob)
+    return today.year - b.year - ((today.month, today.day) < (b.month, b.day))
+
+
+def club_words(name: str) -> set[str]:
+    return {w for w in norm(name).split() if w not in CLUB_FILLER and len(w) > 2}
+
+
+def pick_player(cands: list[dict], row: dict) -> dict | None:
+    """One clear match, using league and then club to break ties; otherwise none."""
+    cands = list({c["id"]: c for c in cands}.values())
+    if len(cands) <= 1:
+        return cands[0] if cands else None
+    if len({c["dob"] for c in cands}) == 1:  # same person listed twice
+        return cands[0]
+    comp = TM_COMPETITIONS.get(row["league"])
+    same_league = [c for c in cands if c["comp"] == comp]
+    if len(same_league) == 1:
+        return same_league[0]
+    words = club_words(row["team"])
+    same_club = [c for c in (same_league or cands) if words & club_words(c["club"])]
+    return same_club[0] if len(same_club) == 1 else None
+
+
+def add_ages(rows: list[dict], tm: list[dict], season: int, today: dt.date | None = None) -> dict[str, int]:
+    """Fill in missing ages. Returns how many were filled per league."""
+    today = today or dt.date.today()
+    recent = [p for p in tm if p["last_season"] >= season - 3]  # skip retired namesakes
+    by_name: dict[str, list] = {}
+    by_last: dict[str, list] = {}
+    for p in recent:
+        for key in {norm(p["name"]), norm(f"{p['first']} {p['last']}")}:
+            if key:
+                by_name.setdefault(key, []).append(p)
+        last = norm(p["last"]).split()
+        if last:
+            by_last.setdefault(last[-1], []).append(p)
+    filled: dict[str, int] = {}
+    for r in rows:
+        if r.get("age") is not None:
+            continue
+        un = norm(r["name"])
+        hit = pick_player(by_name.get(un, []), r)
+        toks = un.split()
+        if not hit and len(toks) >= 2:  # e.g. "Vini Jr" style differences: surname + first initial
+            hit = pick_player([p for p in by_last.get(toks[-1], []) if norm(p["first"])[:1] == toks[0][:1]], r)
+        if hit:
+            r["age"] = age_on(hit["dob"], today)
+            filled[r["league"]] = filled.get(r["league"], 0) + 1
+    return filled
+
+
 # ---------------------------------------------------------------- checks
 
 def check_league(rows: list[dict], league: str, n_teams: int, previous: list[dict],
@@ -336,10 +423,19 @@ def check_league(rows: list[dict], league: str, n_teams: int, previous: list[dic
 
 # ---------------------------------------------------------------- main
 
-def load_previous(path: Path) -> tuple[list[dict], dict]:
+def season_label(season: int) -> str:
+    return f"{season}-{str(season + 1)[2:]}"
+
+
+def load_previous(path: Path, season: int) -> tuple[list[dict], dict]:
+    """Last run's rows, used to catch bad data. Ignored once a new season starts."""
     if not path.exists():
         return [], {}
     d = json.loads(path.read_text("utf-8"))
+    if d.get("season") != season_label(season):
+        print(f"New season {season_label(season)} (last file was {d.get('season')}); "
+              "starting fresh instead of comparing with last season.", file=sys.stderr)
+        return [], {}
     return [dict(zip(d["fields"], row)) for row in d["rows"]], d.get("leagues", {})
 
 
@@ -374,6 +470,12 @@ def build(season: int, previous: list[dict], prev_meta: dict, get=http_get) -> t
             for r in lr:
                 for k in [k for k in r if k.startswith("_")]:
                     del r[k]
+            if not lr and dt.date.today().month in (6, 7, 8):
+                # summer: the new season's league hasn't kicked off yet
+                meta[league] = {"status": "not started", "source": source, "updated": today,
+                                "players": 0, "matches": 0}
+                print("  no matches played yet this season", file=sys.stderr)
+                continue
             prev_source = prev_meta.get(league, {}).get("source")
             same_source = prev_source in (None, source)
             if not same_source:
@@ -392,6 +494,17 @@ def build(season: int, previous: list[dict], prev_meta: dict, get=http_get) -> t
             m.update({"status": "stale" if kept else "missing", "players": len(kept), "error": str(e)})
             meta[league] = m
             print(f"  FAILED: {e} (kept {len(kept)} rows from the last good run)", file=sys.stderr)
+    missing = [r for r in rows if r.get("age") is None]
+    if missing:
+        print("Ages:", file=sys.stderr)
+        try:
+            filled = add_ages(rows, fetch_transfermarkt(get), season)
+            for league in LEAGUE_NAMES:
+                n_missing = sum(1 for r in missing if r["league"] == league)
+                if n_missing:
+                    print(f"  {league}: added {filled.get(league, 0)} of {n_missing} missing ages", file=sys.stderr)
+        except Exception as e:  # noqa: BLE001 - ages are nice to have; never fail the run over them
+            print(f"  warning: could not add ages ({e})", file=sys.stderr)
     return rows, meta, problems
 
 
@@ -402,14 +515,14 @@ def main() -> int:
                     help="season start year, e.g. 2026 for 2026-27")
     a = ap.parse_args()
     out = Path(a.out)
-    previous, prev_meta = load_previous(out)
+    previous, prev_meta = load_previous(out, a.season)
     rows, meta, problems = build(a.season, previous, prev_meta)
     if not rows:
         print("No data for any league; leaving the existing file alone.", file=sys.stderr)
         return 1
     rows.sort(key=lambda r: (r["league"], r["team"], -r["minutes"]))
     doc = {
-        "season": f"{a.season}-{str(a.season + 1)[2:]}",
+        "season": season_label(a.season),
         "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
         "leagues": meta,
         "fields": FIELDS,
