@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}[hidden]{display:none!important}</style>
 </head>
-<body style="margin:0">
+<body>
 <title>Premier League Predictor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -145,14 +146,119 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
   .seg { font-size: 13px; padding-inline: 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .seg, .sc-fill { transition: none; } }
+
+[hidden] { display: none !important; }
+.wrap { grid-template-columns: minmax(0, 1fr); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { all: unset; cursor: pointer; font: 600 21px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; color: var(--muted); padding: 10px 14px 12px; border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--home); }
+.tab:focus-visible { outline: 2px solid var(--home); outline-offset: 2px; }
+.panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; min-width: 0; }
+
+/* Scouting controls */
+.scout-card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; display: grid; gap: 18px; min-width: 0; }
+.sc-controls { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr); gap: 16px; align-items: end; }
+.sc-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > label, .field > .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.field select.small { font: 500 15px/1.2 var(--body); text-transform: none; padding: 9px 10px; }
+#scTeam { border-left: 4px solid var(--home); }
+.segs { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--bg); }
+.segs button { all: unset; cursor: pointer; flex: 1; text-align: center; padding: 11px 6px; font: 600 17px/1 var(--display); text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.segs button + button { border-left: 1px solid var(--line); }
+.segs button[aria-pressed="true"] { background: var(--home); color: var(--on-seg); }
+.segs button:focus-visible { outline: 2px solid var(--home); outline-offset: -2px; }
+.sc-row2 { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px 4px 8px; cursor: pointer; background: var(--bg); }
+.chip input { margin: 0; accent-color: var(--home); }
+.chip.off { color: var(--muted); border-style: dashed; cursor: default; background: transparent; }
+.check { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
+.check input { accent-color: var(--home); margin: 0; }
+.data-line { margin: 0; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+/* Team needs */
+.needs { display: grid; gap: 12px; }
+.needs-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.needs-head h3, .results-head h3, .cmp-head h3 { font-family: var(--display); font-weight: 600; font-size: 22px; text-transform: uppercase; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+.needs-head p, .results-head p, .cmp-head p { margin: 0; color: var(--muted); font-size: 13px; max-width: 60ch; }
+.need-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+.need { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; }
+.need-name { font-weight: 600; font-size: 14px; }
+.need-name .tag { font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--away); margin-left: 8px; }
+.need-val { font: 500 13px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.need-track { grid-column: 1 / -1; position: relative; height: 8px; background: var(--line); border-radius: 4px; }
+.need-fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: rgba(var(--home-soft), .55); }
+.need.gap .need-fill { background: var(--away); }
+.need-mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+.need-sub { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+
+/* Results */
+.results-head, .cmp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+table.res { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+table.res th, table.res td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
+table.res th { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+table.res th.l, table.res td.l { text-align: left; }
+table.res tbody tr:last-child td { border-bottom: 0; }
+table.res td.rank { color: var(--muted); font-family: var(--mono); font-size: 12px; width: 1%; }
+.pl-name { font-weight: 600; }
+.pl-meta { display: block; font-size: 12px; color: var(--muted); }
+.fit { display: inline-grid; grid-template-columns: 34px 70px; gap: 8px; align-items: center; }
+.fit b { font: 600 15px var(--mono); text-align: right; }
+.fit span { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.fit i { display: block; height: 100%; background: var(--home); border-radius: 3px; }
+.p90 { display: block; }
+.pct { display: block; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.cmp-box { all: unset; cursor: pointer; width: 18px; height: 18px; border: 1.5px solid var(--muted); border-radius: 3px; display: inline-grid; place-items: center; font: 700 12px var(--mono); color: var(--on-seg); }
+.cmp-box[aria-pressed="true"] { background: var(--home); border-color: var(--home); }
+.cmp-box[aria-pressed="true"]::after { content: "✓"; }
+.cmp-box:focus-visible { outline: 2px solid var(--home); outline-offset: 2px; }
+.cmp-box:disabled { opacity: .35; cursor: not-allowed; }
+.more { justify-self: start; font: 500 13px var(--mono); color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 8px 12px; cursor: pointer; }
+.more:hover { border-color: var(--muted); }
+.empty { margin: 0; padding: 18px; color: var(--muted); }
+
+/* Compare */
+table.cmp { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+table.cmp th, table.cmp td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.cmp th:first-child, table.cmp td:first-child { text-align: left; color: var(--muted); font-size: 13px; }
+table.cmp thead th { font-weight: 600; vertical-align: bottom; }
+table.cmp thead th .pl-meta { font-weight: 400; }
+table.cmp thead th.now { color: var(--home); }
+table.cmp td.now { color: var(--muted); }
+table.cmp td.best { font-weight: 700; }
+table.cmp tr.sect td { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 14px; }
+table.cmp tbody tr:last-child td { border-bottom: 0; }
+
+@media (max-width: 760px) {
+  .sc-controls { grid-template-columns: minmax(0, 1fr); }
+  .need-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .sc-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sc-filters .field:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+  .tab { font-size: 18px; padding: 10px 10px 12px; }
+}
 </style>
 
 <div class="wrap">
   <header>
-    <div class="eyebrow" id="eyebrow">Weighted toward recent form</div>
+    <div class="eyebrow">Five seasons · 2021–22 to 2025–26 · 1,900 matches</div>
     <h1>Premier League Predictor</h1>
-    <p class="lede">Pick a home team and an away team to see each side's expected goals, the chance of a home win, draw or away win, how likely every scoreline is, and who is most likely to score.</p>
+    <p class="lede">Predict any fixture from five seasons of results, or scout players who would fill a team's weakest areas.</p>
   </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" class="tab" role="tab" id="tab-predict" aria-controls="panel-predict" aria-selected="true">Match predictor</button>
+    <button type="button" class="tab" role="tab" id="tab-scout" aria-controls="panel-scout" aria-selected="false" tabindex="-1">Scouting</button>
+  </nav>
+
+  <div class="panel" id="panel-predict" role="tabpanel" aria-labelledby="tab-predict">
 
   <section class="fixture" aria-label="Match prediction">
     <div class="pickers">
@@ -198,7 +304,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
     <div class="scorers" aria-live="polite">
       <div class="scorers-head">
         <h3>Likely goalscorers</h3>
-        <p>Chance each player scores at least once in this match, based on their expected goals (xG) this season and in past seasons, and their minutes so far this season.</p>
+        <p>Chance each player scores at least once in this match, based on their expected goals (xG) and minutes so far in 2026–27.</p>
       </div>
       <div class="sc-col home" id="scH"></div>
       <div class="sc-col away" id="scA"></div>
@@ -208,7 +314,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
   <section class="ratings">
     <div class="ratings-head">
       <h2>Team ratings</h2>
-      <p>Click a column to sort. Record covers every season in the data; goals per match lean toward recent seasons. Attack and defense of 1.00 = league average.</p>
+      <p>Click a column to sort. Attack and defense of 1.00 = league average.</p>
     </div>
     <div class="table-scroll">
       <table class="rt" id="rt">
@@ -221,49 +327,145 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
   <section class="how">
     <h2>How it works</h2>
     <ol>
-      <li><b>Ratings.</b> Each team's goals scored and conceded per match are compared with the league average of <span id="avgGoals">–</span>. An attack rating of 1.50 means scoring 50% more than average. For defense, lower is better.</li>
-      <li><b>Recent form counts more.</b> Past seasons are combined into a track record where last season counts fully and each earlier season counts half as much as the one after it. That track record is worth <span id="teamHist">19</span> matches, and every match this season counts in full on top, so the current season matters more as it goes on. On top of that, each team's <span id="recentN">5</span> most recent matches <span id="recentX">count double</span>, so the model reacts to hot and cold streaks. The same weighting applies to players' xG and minutes.</li>
+      <li><b>Ratings.</b> Each team's goals scored and conceded per match are compared with the league average of 1.46. An attack rating of 1.58 means scoring 58% more than average. For defense, lower is better.</li>
       <li><b>Expected goals.</b> A team's attack rating × the opponent's defense rating × the league average, with home teams given a 15% boost.</li>
       <li><b>Probabilities.</b> A Poisson distribution turns each side's expected goals into the chance of scoring 0, 1, 2 or more, and combining both sides gives every scoreline.</li>
-      <li><b>Goalscorers.</b> The team's expected goals are split among its players by each one's xG per 90 minutes and their average minutes per match this season. A player's xG per 90 blends this season with his record in previous seasons (worth up to <span id="playerHist">5</span> matches, recent seasons counting more), so early-season odds don't rest on a handful of games alone. A player's chance of scoring is 1 minus the chance he scores zero.</li>
+      <li><b>Goalscorers.</b> The team's expected goals are split among its players by each one's xG per 90 minutes this season and their average minutes per match. A player's chance of scoring is 1 minus the chance they score zero.</li>
     </ol>
-    <p>Teams with no Premier League matches in this data start from the average first season of promoted teams, and their own results take over as they play. Players who changed clubs this season count only for their new club, measured from when they arrived. The model doesn't know about injuries, suspensions or rotation, and a player's past seasons may reflect a different role or club.</p>
+    <p>Teams marked "1 season" have only 38 matches of Premier League data, so their ratings are less reliable. The model uses five-season averages, so it doesn't reflect recent form, injuries or transfers. Coventry and Hull have no Premier League matches in this data, so they use the average of teams in their first season up. Goalscorer odds assume each player plays his usual minutes; they don't know about injuries or rotation, and early-season numbers are based on only five or six matches. Five players who changed clubs mid-season are left out.</p>
   </section>
+  </div>
+
+  <div class="panel" id="panel-scout" role="tabpanel" aria-labelledby="tab-scout" hidden>
+    <section class="scout-card" aria-label="Scouting filters">
+      <div class="sc-controls">
+        <div class="field">
+          <label for="scTeam">Scouting for</label>
+          <select id="scTeam"></select>
+        </div>
+        <div class="field">
+          <span class="lbl" id="posLbl">Position</span>
+          <div class="segs" id="scPos" role="group" aria-labelledby="posLbl">
+            <button type="button" data-pos="G" aria-pressed="false">GK</button>
+            <button type="button" data-pos="D" aria-pressed="false">DEF</button>
+            <button type="button" data-pos="M" aria-pressed="false">MID</button>
+            <button type="button" data-pos="F" aria-pressed="true">FWD</button>
+          </div>
+        </div>
+      </div>
+      <div class="sc-filters">
+        <div class="field">
+          <label for="scAge">Maximum age</label>
+          <select id="scAge" class="small">
+            <option value="99">Any age</option>
+            <option value="21">21 or under</option>
+            <option value="23">23 or under</option>
+            <option value="25">25 or under</option>
+            <option value="27">27 or under</option>
+            <option value="30">30 or under</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="scMin">Minimum minutes</label>
+          <select id="scMin" class="small">
+            <option value="90">90+</option>
+            <option value="180">180+</option>
+            <option value="270" selected>270+</option>
+            <option value="360">360+</option>
+            <option value="450">450+</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="lbl">Squad</span>
+          <label class="check" for="scOwn"><input type="checkbox" id="scOwn"> <span id="scOwnTxt">Include own players</span></label>
+        </div>
+      </div>
+      <div class="sc-row2">
+        <div class="chips" id="scLeagues" aria-label="Leagues"></div>
+        <p class="data-line" id="scData"></p>
+      </div>
+    </section>
+
+    <section class="needs" aria-live="polite">
+      <div class="needs-head">
+        <h3 id="needsTitle">What they need</h3>
+        <p id="needsNote"></p>
+      </div>
+      <ul class="need-list" id="needList"></ul>
+    </section>
+
+    <section class="results">
+      <div class="results-head">
+        <h3 id="resTitle">Best fits</h3>
+        <p id="resNote"></p>
+      </div>
+      <div class="table-scroll"><table class="res" id="resTable"></table></div>
+      <button type="button" class="more" id="resMore" hidden>Show 25 more</button>
+    </section>
+
+    <section class="compare">
+      <div class="cmp-head">
+        <h3>Compare</h3>
+        <p>Tick up to three players in the list above. Bold marks the best value in each row.</p>
+      </div>
+      <div class="table-scroll" id="cmpWrap"></div>
+    </section>
+
+    <section class="how">
+      <h2>How scouting works</h2>
+      <ol>
+        <li><b>Team needs.</b> The stats of everyone who has played the chosen position for the team are added up and turned into per-90-minute rates. Each rate is then ranked against every player at that position in the selected leagues. A bar left of the middle line means the team is below the typical player there.</li>
+        <li><b>Fit score.</b> Each candidate is ranked the same way on each stat. Stats where the team is weakest count for more, so a striker who fixes a team's biggest gap scores higher than one who is only strong where the team is already good. The score runs from 0 to 100.</li>
+        <li><b>Small samples.</b> Rates for players with few minutes are pulled toward the average for their position before ranking, so two goals in 150 minutes doesn't top the list. The table shows each player's actual rate.</li>
+      </ol>
+      <p>Defensive stats (tackles, clearances, blocks, interceptions, recoveries, saves) and ages come from Fantasy Premier League, so they exist only for Premier League players. Players in other leagues are ranked on the stats they have. Positions are broad (goalkeeper, defender, midfielder, forward), so a winger and a holding midfielder can share a list. Early in the season every number rests on a handful of matches.</p>
+    </section>
+  </div>
+
 </div>
 
-<script src="players_data.js"></script>
 <script>
 (function () {
-  if (typeof TEAMS === "undefined" || typeof PLAYERS === "undefined") {
-    document.querySelector(".wrap").insertAdjacentHTML("afterbegin",
-      "<p style='color:var(--away);font-weight:600'>The data file players_data.js didn't load. " +
-      "Run update_players.py and keep players_data.js in the same folder as this page.</p>");
-    return;
-  }
-  var AVG = META.avg;
+  // [team, matches, wins, draws, losses, points, goals scored/match, goals conceded/match]
+  var RAW = [
+    ["Man City",190,129,35,26,422,2.31,0.91],["Arsenal",190,122,35,33,401,2.00,0.95],
+    ["Liverpool",190,113,46,31,385,2.13,1.09],["Aston Villa",190,89,38,63,305,1.54,1.37],
+    ["Man United",190,88,42,60,306,1.50,1.38],["Newcastle",190,84,43,63,295,1.67,1.36],
+    ["Chelsea",190,84,50,56,302,1.65,1.25],["Tottenham",190,81,33,76,276,1.71,1.51],
+    ["Brighton",190,72,59,59,275,1.51,1.39],["Brentford",190,68,49,73,253,1.49,1.45],
+    ["West Ham",190,62,44,84,230,1.34,1.62],["Crystal Palace",190,59,63,68,240,1.26,1.34],
+    ["Fulham",152,58,31,63,205,1.39,1.44],["Everton",190,56,52,82,220,1.08,1.41],
+    ["Wolves",190,54,38,98,200,1.05,1.59],["Bournemouth",152,52,44,56,200,1.36,1.57],
+    ["Nott'm Forest",152,48,39,65,183,1.27,1.53],["Leicester",114,29,24,61,111,1.28,1.82],
+    ["Leeds",114,27,35,52,116,1.22,1.87],["Southampton",114,17,26,71,77,0.92,1.98],
+    ["Burnley",114,16,33,65,81,0.99,1.81],["Sunderland",38,14,12,12,54,1.11,1.26],
+    ["Watford",38,6,5,27,23,0.89,2.03],["Luton",38,6,8,24,26,1.37,2.24],
+    ["Norwich",38,5,7,26,22,0.61,2.21],["Ipswich",38,4,10,24,22,0.95,2.16],
+    ["Sheffield United",38,3,7,28,16,0.92,2.74]
+  ];
+  // 2026-27 player data: per team, [player, expected per-match xG contribution, goals, xG, minutes, apps]
+  var PLAYERS = {"Arsenal":{"games":6,"sum":1.975,"p":[["Bukayo Saka",0.6719,3,4.59,512,6],["Martin Odegaard",0.2724,2,1.79,481,6],["Kai Havertz",0.2449,2,1.58,508,6],["Riccardo Calafiori",0.2266,1,1.45,509,6],["Gabriel",0.1686,0,1.03,540,6],["Christos Tzolis",0.0523,0,0.24,371,5],["Myles Lewis-Skelly",0.0436,0,0.18,346,5],["Ben White",0.0378,0,0.13,383,5]]},"Aston Villa":{"games":6,"sum":1.2625,"p":[["Nicolas Jackson",0.2043,2,1.36,388,5],["John McGinn",0.1784,1,1.1,537,6],["Emiliano Buendía",0.1629,1,1.01,482,6],["Johan Manzambi",0.1603,1,1.26,193,3],["Victor Lindelöf",0.1071,0,0.6,540,6],["Ross Barkley",0.0597,0,0.31,317,6],["Ian Maatsen",0.0528,0,0.25,343,4],["George Hemmings",0.0525,0,0.26,298,5]]},"Bournemouth":{"games":6,"sum":1.6433,"p":[["Rayan",0.2983,0,1.94,536,6],["Evanilson",0.2728,1,1.77,520,6],["Marcus Tavernier",0.2606,3,1.69,509,6],["António Silva",0.2543,0,1.63,540,6],["Justin Kluivert",0.159,1,1.08,311,4],["Alex Scott",0.1055,1,0.61,449,5],["Ryan Christie",0.0926,0,0.7,170,5],["Adrien Truffert",0.0385,0,0.12,536,6]]},"Brentford":{"games":6,"sum":1.9055,"p":[["Thiago",0.4707,1,3.15,534,6],["Kevin Schade",0.2987,3,1.96,507,6],["Keane Lewis-Potter",0.1887,1,1.19,490,6],["Jaidon Anthony",0.1773,1,1.18,360,6],["Vitaly Janelt",0.1443,2,0.86,540,6],["Michael Kayode",0.137,1,0.86,394,6],["Kristoffer Ajer",0.1071,1,0.6,540,6],["Nathan Collins",0.0868,0,0.61,196,3]]},"Brighton":{"games":6,"sum":2.0718,"p":[["Pascal Groß",0.2714,3,1.75,540,6],["Maxim De Cuyper",0.2699,2,1.76,501,6],["Charalampos Kostoulas",0.2659,2,1.79,417,6],["Diego Gómez",0.2423,0,1.55,532,6],["Luka Vuskovic",0.2122,1,1.34,529,6],["Malick Yalcouyé",0.1963,2,1.44,257,6],["Yasin Ayari",0.1543,1,0.97,429,5],["Jack Hinshelwood",0.1121,2,1.4,69,1]]},"Chelsea":{"games":6,"sum":1.7732,"p":[["João Pedro",0.4569,5,3.16,434,5],["Cole Palmer",0.2811,2,1.82,535,6],["Morgan Rogers",0.2479,4,1.59,530,6],["Pedro Neto",0.2286,1,1.51,428,6],["Romeo Lavia",0.1754,1,1.23,289,5],["Maxence Lacroix",0.0625,0,0.3,452,6],["Reece James",0.0509,0,0.25,290,4],["Jordan Henderson",0.0278,2,0.1,180,2]]},"Coventry":{"games":5,"sum":1.1233,"p":[["Jack Rudoni",0.2423,0,1.42,304,5],["Taiwo Awoniyi",0.2138,0,1.33,234,4],["Jay Dasilva",0.0915,1,0.4,446,5],["Bobby Thomas",0.0731,0,0.29,440,5],["Ephron Mason-Clark",0.0698,0,0.33,240,4],["Ellis Simms",0.0689,0,0.49,105,3],["Brandon Thomas-Asante",0.0586,0,0.26,226,5],["Loum Tchaouna",0.0507,0,0.21,214,4]]},"Crystal Palace":{"games":6,"sum":1.515,"p":[["Tyrick Mitchell",0.1691,2,1.04,520,6],["Eddie Nketiah",0.1676,0,1.34,187,5],["Daichi Kamada",0.1642,1,1.0,539,6],["Yeremi Pino",0.163,1,1.05,397,6],["Anan Khalaili",0.1607,1,1.0,467,6],["Jørgen Strand Larsen",0.1542,1,0.99,388,6],["Jean-Philippe Mateta",0.1046,0,1.32,67,1],["Jefferson Lerma",0.1045,1,0.94,122,3]]},"Everton":{"games":6,"sum":1.7761,"p":[["Thierno Barry",0.8073,3,5.54,515,6],["Kiernan Dewsbury-Hall",0.2771,2,1.79,540,6],["Brennan Johnson",0.1435,0,0.96,311,6],["Harrison Armstrong",0.1154,0,0.66,531,6],["Jarrad Branthwaite",0.1114,0,0.63,540,6],["Tyrique George",0.0698,1,0.38,339,6],["James Garner",0.0453,0,0.18,421,6],["James Tarkowski",0.0414,1,0.14,540,6]]},"Fulham":{"games":6,"sum":1.635,"p":[["Gonzalo García",0.4839,1,3.26,516,6],["Joshua King",0.2136,2,1.36,505,6],["Oscar Bobb",0.1573,0,0.99,433,6],["César Palacios",0.1512,1,1.1,238,4],["Alex Iwobi",0.1188,0,0.69,504,6],["Timothy Castagne",0.1094,0,0.65,412,5],["Antonee Robinson",0.0663,0,0.33,437,5],["Sander Berge",0.0498,0,0.21,440,6]]},"Hull":{"games":6,"sum":1.2263,"p":[["Oliver McBurnie",0.2553,0,1.64,534,6],["Mohamed Belloumi",0.1763,3,1.13,429,6],["Nobel Mendy",0.1604,1,1.06,350,5],["Semi Ajayi",0.1547,1,0.94,516,6],["Joe Gelhardt",0.075,1,0.87,71,2],["Mohamed Ali-Cho",0.0639,1,0.79,62,4],["Regan Slater",0.0412,0,0.14,522,6],["Sorba Thomas",0.0351,0,0.15,212,4]]},"Ipswich":{"games":6,"sum":1.4223,"p":[["Leif Davis",0.2786,2,1.8,540,6],["Emersonn",0.2551,2,1.72,406,6],["Julio Enciso",0.2154,0,1.38,490,6],["Daizen Maeda",0.1229,0,0.78,344,6],["Dara O&#039;Shea",0.1029,1,0.57,540,6],["Zian Flemming",0.0744,1,0.87,70,4],["Chuba Akpom",0.0625,1,0.6,90,4],["Jack Clarke",0.0483,1,0.27,200,5]]},"Leeds":{"games":6,"sum":1.5776,"p":[["Dominic Calvert-Lewin",0.495,2,3.34,514,6],["Jayden Bogle",0.2611,2,1.72,465,6],["Anton Stach",0.2243,1,1.42,540,6],["Ao Tanaka",0.1284,0,0.83,331,5],["James Justin",0.087,1,0.46,532,6],["Tarik Muharemovic",0.0757,0,0.38,540,6],["Noah Okafor",0.0553,1,0.26,382,6],["Nico Elvedi",0.0425,0,0.16,416,5]]},"Liverpool":{"games":6,"sum":1.5332,"p":[["Alexander Isak",0.5319,4,3.73,417,5],["Dominik Szoboszlai",0.1952,1,1.26,441,5],["Florian Wirtz",0.1708,0,1.07,472,6],["Víctor Muñoz",0.0929,1,0.55,351,6],["Cody Gakpo",0.0913,1,0.53,373,5],["Alexis Mac Allister",0.0721,0,0.38,401,6],["Bradley Barcola",0.0704,0,0.42,258,4],["Rio Ngumoha",0.0497,0,0.39,111,4]]},"Man City":{"games":6,"sum":1.8648,"p":[["Erling Haaland",0.7496,6,5.11,531,6],["Mathis Cherki",0.2943,4,2.01,403,6],["Phil Foden",0.202,0,1.56,219,4],["Marc Guehi",0.1229,1,0.71,540,6],["Nico O&#039;Reilly",0.1041,0,0.72,229,5],["Josko Gvardiol",0.092,1,0.51,459,6],["Antoine Semenyo",0.0814,2,0.42,540,6],["Rúben Dias",0.0443,0,0.16,540,6]]},"Man United":{"games":6,"sum":1.8808,"p":[["Bryan Mbeumo",0.4914,3,3.29,540,6],["Bruno Fernandes",0.4614,3,3.08,540,6],["Marcus Rashford",0.196,0,1.32,360,6],["Patrick Dorgu",0.1218,0,0.97,169,5],["Matheus Cunha",0.1161,1,0.67,507,6],["Youri Tielemans",0.0713,0,0.36,467,6],["Diogo Dalot",0.0647,0,0.33,382,6],["Harry Maguire",0.0543,0,0.23,540,6]]},"Newcastle":{"games":5,"sum":1.2607,"p":[["Yoane Wissa",0.4289,1,2.43,443,5],["Harvey Barnes",0.1683,1,0.86,450,5],["Joe Willock",0.1544,2,0.86,292,5],["Anthony Elanga",0.083,2,0.42,241,3],["Lewis Hall",0.0783,1,0.32,450,5],["Amar Dedic",0.0581,0,0.22,330,4],["Sven Botman",0.0333,0,0.05,450,5],["Lewis Miley",0.0327,0,0.05,405,5]]},"Nott'm Forest":{"games":6,"sum":1.8309,"p":[["Dan Ndoye",0.4182,2,2.91,410,6],["Liam Delap",0.307,1,2.16,354,5],["Igor Jesus",0.2932,1,2.24,251,5],["Morgan Gibbs-White",0.2443,1,1.56,540,6],["Murillo",0.11,0,0.62,540,6],["Neco Williams",0.1,0,0.55,540,6],["James McAtee",0.0738,0,0.37,516,6],["Xaver Schlager",0.0652,0,0.32,446,6]]},"Sunderland":{"games":6,"sum":1.788,"p":[["Brian Brobbey",0.4184,3,2.92,404,5],["Enzo Le Fée",0.2874,1,1.87,525,6],["Nordi Mukiele",0.1861,0,1.19,450,5],["Wilson Isidor",0.1595,1,1.26,190,6],["Noah Sadiki",0.1504,0,0.91,515,6],["Thomas Meunier",0.147,0,0.91,446,6],["Nilson Angulo",0.1162,1,0.7,410,6],["Malick Fofana",0.0543,0,0.46,103,4]]},"Tottenham":{"games":6,"sum":1.3593,"p":[["Dominic Solanke",0.2073,1,1.51,269,6],["Jan Paul van Hecke",0.17,1,1.04,540,6],["Conor Gallagher",0.1301,1,0.97,207,4],["Micky van de Ven",0.1183,0,0.73,376,5],["Omar Marmoush",0.1071,0,0.65,368,5],["Sávio",0.0892,0,0.53,332,4],["Archie Gray",0.0655,0,0.33,405,5],["Mikey Moore",0.065,0,0.63,90,2]]}};
+  var PROMOTED = { gf: 0.975, ga: 2.107 }; // average of the six teams with one season in this data
   var HOME_BOOST = 1.15;
-  var teams = TEAMS.map(function (t) {
-    var o = {}; for (var k in t) o[k] = t[k];
-    o.ppm = t.m ? t.pts / t.m : 0; o.gd = t.gf - t.ga;
-    return o;
+  var totalM = 0, totalS = 0;
+  RAW.forEach(function (r) { totalM += r[1]; totalS += r[1] * r[6]; });
+  var AVG = totalS / totalM;
+
+  var teams = RAW.map(function (r) {
+    return { name: r[0], m: r[1], w: r[2], d: r[3], l: r[4], pts: r[5], gf: r[6], ga: r[7],
+             ppm: r[5] / r[1], gd: r[6] - r[7], att: r[6] / AVG, def: r[7] / AVG };
   });
-  document.getElementById("eyebrow").textContent =
-    META.first + " to " + META.current + " · " + META.matches.toLocaleString() + " matches · weighted toward recent form";
-  document.getElementById("avgGoals").textContent = AVG.toFixed(2);
-  document.getElementById("teamHist").textContent = META.teamHistory;
-  document.getElementById("playerHist").textContent = META.playerHistory;
-  document.getElementById("recentN").textContent = META.recentMatches;
-  var rx = 1 + META.recentBoost;
-  document.getElementById("recentX").textContent =
-    META.recentBoost > 0 ? (rx === 2 ? "count double" : "count " + rx + "× as much") : "count the same as the rest";
+  ["Coventry", "Hull"].forEach(function (n) {
+    teams.push({ name: n, m: 0, gf: PROMOTED.gf, ga: PROMOTED.ga, att: PROMOTED.gf / AVG, def: PROMOTED.ga / AVG, est: true });
+  });
   var byName = {}; teams.forEach(function (t) { byName[t.name] = t; });
 
   var homeSel = document.getElementById("home"), awaySel = document.getElementById("away");
   [homeSel, awaySel].forEach(function (sel) {
     var cur = document.createElement("optgroup"), old = document.createElement("optgroup");
-    cur.label = META.current + " season"; old.label = "Other recent teams";
+    cur.label = "2026–27 season"; old.label = "Other recent teams";
     teams.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (t) {
-      (t.current ? cur : old).appendChild(new Option(t.name, t.name));
+      (PLAYERS[t.name] ? cur : old).appendChild(new Option(t.name + (t.est ? " (estimate)" : ""), t.name));
     });
     sel.appendChild(cur); sel.appendChild(old);
   });
@@ -314,7 +516,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
   function scorerList(t, xg) {
     var P = PLAYERS[t.name];
     var head = "<div class='sc-team'>" + esc(t.name) + " · " + xg.toFixed(2) + " expected goals</div>";
-    if (!P) return head + "<p class='sc-none'>No " + META.current + " player data. " + esc(t.name) + " isn't in the league this season.</p>";
+    if (!P) return head + "<p class='sc-none'>No 2026–27 player data. " + esc(t.name) + " isn't in the league this season.</p>";
     var rows = P.p.slice(0, 6).map(function (r) {
       var prob = 1 - Math.exp(-xg * r[1] / P.sum);
       return "<li class='sc-row'><span class='sc-name' title='" + esc(r[0]) + "'>" + esc(r[0]) + "</span>" +
@@ -329,7 +531,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
     el.style.flex = "0 0 " + (v * 100) + "%";
     el.textContent = v >= 0.08 ? Math.round(v * 100) + "%" : "";
   }
-  function esc(s) { return s.replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function esc(s) { return s.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   function drawGrid(h, a, ph, pa, bi, bj, best) {
     var M = 5, html = "<tr><th></th><th colspan='" + (M + 1) + "' class='ax-a'>" + esc(a.name) + " goals →</th></tr><tr><th class='ax-h'>Home ↓</th>";
@@ -369,7 +571,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
     th.appendChild(b); th.dataset.k = c.k; headRow.appendChild(th);
   });
   function renderTable() {
-    var rows = teams.slice().sort(function (x, y) {
+    var rows = teams.filter(function (t) { return !t.est; }).sort(function (x, y) {
       var a = x[sortKey], b = y[sortKey];
       var r = typeof a === "string" ? a.localeCompare(b) : a - b;
       return asc ? r : -r;
@@ -377,7 +579,7 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
     body.innerHTML = rows.map(function (t) {
       return "<tr data-team='" + esc(t.name) + "'>" + cols.map(function (c) {
         var v = t[c.k];
-        if (c.k === "name") return "<td>" + esc(v) + (t.isNew ? "<span class='pill'>new</span>" : (t.seasons === 1 ? "<span class='pill'>1 season</span>" : "")) + "</td>";
+        if (c.k === "name") return "<td>" + esc(v) + (t.m === 38 ? "<span class='pill'>1 season</span>" : "") + "</td>";
         var s = c.f ? v.toFixed(c.f) : v;
         if (c.sign && v > 0) s = "+" + s;
         return "<td>" + s + "</td>";
@@ -411,6 +613,343 @@ table.rt tr.sel-a td:first-child { box-shadow: inset 4px 0 var(--away); }
   predict();
 })();
 </script>
+<script>
+// ---------------------------------------------------------------- Tabs
+(function () {
+  var tabs = [
+    { id: "predict", btn: document.getElementById("tab-predict"), panel: document.getElementById("panel-predict"), hash: "",
+      eyebrow: "Five seasons · 2021–22 to 2025–26 · 1,900 matches" },
+    { id: "scout", btn: document.getElementById("tab-scout"), panel: document.getElementById("panel-scout"), hash: "#scouting",
+      eyebrow: "2026–27 season · Player scouting" }
+  ];
+  var eyebrow = document.querySelector("header .eyebrow");
+  function show(id, focus) {
+    tabs.forEach(function (t) {
+      var on = t.id === id;
+      t.btn.setAttribute("aria-selected", on ? "true" : "false");
+      t.btn.tabIndex = on ? 0 : -1;
+      t.panel.hidden = !on;
+      if (on) {
+        eyebrow.textContent = t.eyebrow;
+        try { history.replaceState(null, "", t.hash || location.pathname + location.search); } catch (e) {}
+        if (focus) t.btn.focus();
+      }
+    });
+    try { localStorage.setItem("plp-tab", id); } catch (e) {}
+  }
+  tabs.forEach(function (t, i) {
+    t.btn.addEventListener("click", function () { show(t.id); });
+    t.btn.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        show(tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length].id, true);
+        e.preventDefault();
+      }
+    });
+  });
+  var start = location.hash === "#scouting" ? "scout" : null;
+  if (!start) { try { start = localStorage.getItem("plp-tab"); } catch (e) {} }
+  show(start === "scout" ? "scout" : "predict");
+})();
 
+// ---------------------------------------------------------------- Scouting
+(function () {
+  // Embedded copy of data/players.json. On GitHub Pages the page loads the fresh file instead.
+  var DATA = {"season":"2026-27","generated":"2026-10-13T17:10Z","leagues":{"Premier League":{"status":"ok","source":"fpl","updated":"2026-10-13","players":436,"matches":6}},"fields":["name","team","league","pos","age","apps","starts","minutes","goals","assists","xg","xa","npxg","shots","key_passes","tackles","cbi","recoveries","saves","clean_sheets","goals_conceded"],"rows":[["David Raya","Arsenal","Premier League","G",31,6,6,540,0,0,0.0,0.01,null,null,null,1,7,71,13,3,5],["Gabriel","Arsenal","Premier League","D",28,6,6,540,0,0,0.51,0.21,null,null,null,6,40,18,0,3,5],["Bukayo Saka","Arsenal","Premier League","M",25,6,6,506,3,0,3.63,1.04,null,null,null,7,11,21,0,3,5],["Declan Rice","Arsenal","Premier League","M",27,6,6,501,0,3,0.12,0.77,null,null,null,9,23,20,0,3,5],["Kai Havertz","Arsenal","Premier League","F",27,6,6,499,2,0,1.81,0.39,null,null,null,0,6,7,0,3,5],["Riccardo Calafiori","Arsenal","Premier League","D",24,6,6,497,1,2,1.22,0.68,null,null,null,8,14,14,0,3,5],["Martin Ødegaard","Arsenal","Premier League","M",27,6,6,466,2,0,1.9,1.44,null,null,null,6,6,17,0,3,5],["Benjamin White","Arsenal","Premier League","D",29,5,5,377,0,2,0.18,0.46,null,null,null,9,13,14,0,2,2],["Ezri Konsa","Arsenal","Premier League","D",28,5,4,371,0,0,0.23,0.02,null,null,null,8,25,12,0,1,5],["Christos Tzolis","Arsenal","Premier League","M",24,5,5,362,0,2,0.19,0.55,null,null,null,4,7,12,0,2,4],["Myles Lewis-Skelly","Arsenal","Premier League","M",20,5,5,333,0,0,0.18,0.58,null,null,null,1,8,9,0,2,2],["Cristhian Mosquera","Arsenal","Premier League","D",22,2,2,168,0,0,0.0,0.01,null,null,null,0,10,3,0,2,0],["Bruno Guimarães","Arsenal","Premier League","M",28,4,1,150,2,0,0.19,0.23,null,null,null,1,4,13,0,0,3],["Jurriën Timber","Arsenal","Premier League","D",25,3,1,131,0,0,0.0,0.08,null,null,null,3,3,8,0,0,3],["Noni Madueke","Arsenal","Premier League","M",24,3,1,113,0,0,0.28,0.52,null,null,null,1,1,6,0,0,1],["Martín Zubimendi","Arsenal","Premier League","M",27,5,0,89,0,0,0.21,0.04,null,null,null,4,5,3,0,0,0],["Eberechi Eze","Arsenal","Premier League","M",28,4,0,85,0,0,0.04,0.09,null,null,null,0,0,5,0,0,0],["Mikel Merino","Arsenal","Premier League","M",30,6,0,82,0,0,0.14,0.15,null,null,null,0,1,9,0,0,0],["Viktor Gyökeres","Arsenal","Premier League","F",28,3,0,56,0,0,0.0,0.39,null,null,null,1,0,4,0,0,0],["Piero Hincapie","Arsenal","Premier League","D",24,3,0,40,0,0,0.0,0.0,null,null,null,1,5,0,0,0,0],["Max Dowman","Arsenal","Premier League","M",16,1,0,9,0,0,0.0,0.08,null,null,null,0,0,0,0,0,0],["Victor Lindelöf","Aston Villa","Premier League","D",32,6,6,540,0,0,0.44,0.17,null,null,null,1,35,9,0,1,11],["Boubacar Kamara","Aston Villa","Premier League","M",26,6,6,533,0,1,0.17,0.24,null,null,null,10,18,21,0,2,9],["John McGinn","Aston Villa","Premier League","M",31,6,6,524,1,2,1.64,0.31,null,null,null,6,9,21,0,2,9],["Emiliano Buendía","Aston Villa","Premier League","M",29,6,6,464,1,1,1.33,0.33,null,null,null,12,5,27,0,1,9],["Zion Suzuki","Aston Villa","Premier League","G",24,5,5,450,0,0,0.0,0.01,null,null,null,0,13,51,18,1,7],["Matty Cash","Aston Villa","Premier League","D",29,5,4,386,0,0,0.15,0.05,null,null,null,11,14,5,0,1,9],["Nicolas Jackson","Aston Villa","Premier League","F",25,5,5,376,2,0,1.1,0.73,null,null,null,2,1,8,0,1,4],["Tyrone Mings","Aston Villa","Premier League","D",33,5,3,351,0,0,0.2,0.02,null,null,null,4,28,10,0,1,6],["Ian Maatsen","Aston Villa","Premier League","D",24,4,4,335,0,0,0.28,0.45,null,null,null,7,17,10,0,1,7],["Ross Barkley","Aston Villa","Premier League","M",32,6,4,312,0,0,0.38,0.15,null,null,null,7,5,18,0,1,8],["George Hemmings","Aston Villa","Premier League","M",19,5,4,297,0,0,0.07,0.16,null,null,null,6,3,10,0,1,7],["Joao Gomes","Aston Villa","Premier League","M",25,3,3,214,0,0,0.0,0.04,null,null,null,10,7,6,0,0,8],["Aaron Wan-Bissaka","Aston Villa","Premier League","D",28,5,2,197,0,0,0.0,0.08,null,null,null,11,15,2,0,0,3],["Pau","Aston Villa","Premier League","D",29,3,3,187,0,0,0.0,0.01,null,null,null,1,8,9,0,0,5],["Johan Manzambi","Aston Villa","Premier League","M",20,3,2,183,1,2,0.98,0.4,null,null,null,2,2,9,0,1,3],["Matteo Ruggeri","Aston Villa","Premier League","D",24,4,2,158,0,0,0.03,0.02,null,null,null,2,20,12,0,0,3],["Alysson","Aston Villa","Premier League","M",20,5,0,91,1,0,0.06,0.0,null,null,null,2,2,4,0,0,2],["Marco Bizot","Aston Villa","Premier League","G",35,1,1,90,0,0,0.0,0.0,null,null,null,0,2,6,3,0,4],["Tammy Abraham","Aston Villa","Premier League","F",29,4,0,71,0,0,0.0,0.0,null,null,null,1,0,1,0,0,3],["Ibrahim Mbaye","Aston Villa","Premier League","M",null,3,0,59,0,0,0.06,0.2,null,null,null,2,1,2,0,0,4],["Alejandro Garnacho","Aston Villa","Premier League","M",22,3,0,31,0,0,0.0,0.0,null,null,null,0,0,2,0,0,0],["Lamare Bogarde","Aston Villa","Premier League","M",22,1,0,16,0,0,0.0,0.0,null,null,null,0,1,0,0,0,0],["Đorđe Petrović","Bournemouth","Premier League","G",27,6,6,540,0,0,0.0,0.0,null,null,null,0,7,50,12,0,13],["James Hill","Bournemouth","Premier League","D",24,6,6,540,0,0,0.0,0.81,null,null,null,13,48,16,0,0,13],["António João Silva","Bournemouth","Premier League","D",22,6,6,540,0,0,1.3,0.32,null,null,null,7,54,21,0,0,13],["Adrien Truffert","Bournemouth","Premier League","D",24,6,6,533,0,0,0.11,0.58,null,null,null,21,32,26,0,0,13],["Rayan","Bournemouth","Premier League","M",20,6,6,524,0,0,1.14,0.46,null,null,null,6,8,4,0,0,12],["Evanilson","Bournemouth","Premier League","F",27,6,6,514,1,3,1.48,0.62,null,null,null,4,13,18,0,2,10],["Adam Smith","Bournemouth","Premier League","D",35,6,6,505,0,0,0.01,0.14,null,null,null,5,18,16,0,0,13],["Marcus Tavernier","Bournemouth","Premier League","M",27,6,6,496,3,0,1.7,0.96,null,null,null,12,6,29,0,0,13],["Alex Scott","Bournemouth","Premier League","M",23,5,5,446,1,2,0.64,0.42,null,null,null,9,15,36,0,1,7],["Tyler Adams","Bournemouth","Premier League","M",27,6,4,369,0,0,0.03,0.09,null,null,null,7,15,25,0,0,12],["Justin Kluivert","Bournemouth","Premier League","M",27,4,4,294,1,0,0.99,0.08,null,null,null,4,2,16,0,2,3],["Lewis Cook","Bournemouth","Premier League","M",29,6,2,197,0,0,0.0,0.01,null,null,null,1,9,8,0,2,1],["Ryan Christie","Bournemouth","Premier League","M",31,5,2,174,0,0,0.53,0.53,null,null,null,2,5,20,0,0,7],["David Brooks","Bournemouth","Premier League","M",29,5,1,90,0,0,0.0,0.08,null,null,null,1,2,5,0,0,4],["Ben Gannon-Doak","Bournemouth","Premier League","M",20,5,0,57,0,0,0.12,0.1,null,null,null,3,0,9,0,0,4],["Daniel Jebbison","Bournemouth","Premier League","F",23,3,0,31,0,0,0.1,0.0,null,null,null,0,0,1,0,0,2],["Álvaro Rodríguez","Bournemouth","Premier League","F",22,3,0,28,0,0,0.02,0.03,null,null,null,0,1,3,0,0,1],["Juanlu Sanchez","Bournemouth","Premier League","D",23,1,0,18,0,0,0.0,0.0,null,null,null,1,0,1,0,0,0],["Alex Tóth","Bournemouth","Premier League","M",20,2,0,17,0,0,0.0,0.0,null,null,null,1,0,1,0,0,2],["Julio Soler","Bournemouth","Premier League","D",21,1,0,6,0,0,0.0,0.0,null,null,null,1,0,2,0,0,0],["Caoimhín Kelleher","Brentford","Premier League","G",27,6,6,540,0,0,0.0,0.01,null,null,null,0,9,44,22,2,6],["Kristoffer Ajer","Brentford","Premier League","D",28,6,6,540,1,0,0.32,0.08,null,null,null,6,53,18,0,2,6],["Vitaly Janelt","Brentford","Premier League","M",28,6,6,540,2,0,0.53,0.49,null,null,null,18,33,27,0,2,6],["Thiago","Brentford","Premier League","F",25,6,6,532,1,1,3.2,0.29,null,null,null,4,6,16,0,2,6],["Kevin Schade","Brentford","Premier League","M",24,6,6,498,3,2,1.93,0.33,null,null,null,9,6,23,0,2,5],["Keane Lewis-Potter","Brentford","Premier League","M",25,6,6,472,1,1,1.25,0.83,null,null,null,6,18,19,0,2,5],["Michael Kayode","Brentford","Premier League","D",22,6,5,384,1,0,0.55,0.51,null,null,null,4,17,18,0,2,3],["Mamadou Sangaré","Brentford","Premier League","M",24,6,4,359,0,2,0.41,0.68,null,null,null,17,16,26,0,1,4],["Jaidon Anthony","Brentford","Premier League","M",26,6,4,351,1,1,1.24,0.55,null,null,null,5,7,21,0,2,5],["Jannik Schuster","Brentford","Premier League","D",20,4,3,298,0,1,0.1,0.54,null,null,null,3,41,9,0,1,4],["Mikkel Damsgaard","Brentford","Premier League","M",26,5,3,283,0,1,0.17,0.73,null,null,null,7,6,18,0,2,1],["Yehor Yarmoliuk","Brentford","Premier League","M",22,6,3,282,1,1,0.19,0.32,null,null,null,7,9,14,0,1,5],["Dango","Brentford","Premier League","M",24,6,2,202,0,0,0.16,0.39,null,null,null,5,10,19,0,1,2],["Aaron Hickey","Brentford","Premier League","D",24,6,1,197,0,0,0.03,0.06,null,null,null,4,18,10,0,0,4],["Nathan Collins","Brentford","Premier League","D",25,3,3,196,0,0,0.51,0.05,null,null,null,2,15,11,0,1,1],["El Hadji Malick Diouf","Brentford","Premier League","D",null,3,1,129,0,0,0.11,0.02,null,null,null,4,4,5,0,0,2],["Mathias Jensen","Brentford","Premier League","M",30,2,1,89,0,1,0.08,0.4,null,null,null,2,1,3,0,1,1],["Callum Wilson","Brentford","Premier League","F",34,4,0,18,0,0,0.07,0.04,null,null,null,0,1,2,0,0,0],["Fábio Carvalho","Brentford","Premier League","M",24,1,0,3,1,0,0.43,0.0,null,null,null,0,0,0,0,0,0],["Rico Henry","Brentford","Premier League","D",29,1,0,2,0,0,0.0,0.0,null,null,null,0,0,0,0,0,0],["Bart Verbruggen","Brighton","Premier League","G",24,6,6,540,0,0,0.0,0.2,null,null,null,0,4,44,15,4,5],["Pascal Groß","Brighton","Premier League","M",35,6,6,540,3,5,2.02,1.05,null,null,null,12,12,12,0,4,5],["Luka Vuskovic","Brighton","Premier League","D",19,6,6,527,1,0,0.73,0.08,null,null,null,7,51,21,0,4,5],["Diego Gomez","Brighton","Premier League","M",23,6,6,520,0,3,1.02,0.79,null,null,null,18,12,25,0,4,5],["Olivier Boscagli","Brighton","Premier League","D",28,6,6,504,0,0,0.07,0.59,null,null,null,4,29,18,0,4,5],["Maxim De Cuyper","Brighton","Premier League","D",25,6,6,490,2,3,1.8,0.67,null,null,null,9,10,23,0,4,5],["Ferdi Kadıoğlu","Brighton","Premier League","D",27,5,5,422,0,0,0.12,0.14,null,null,null,2,20,14,0,3,5],["Yasin Ayari","Brighton","Premier League","M",23,5,5,420,1,0,0.82,0.19,null,null,null,2,5,16,0,4,1],["Charalampos Kostoulas","Brighton","Premier League","F",19,6,5,412,2,3,1.36,0.07,null,null,null,6,8,20,0,2,5],["Lewis Dunk","Brighton","Premier League","D",34,5,4,390,1,0,0.03,0.09,null,null,null,3,25,15,0,2,5],["Malick Yalcouyé","Brighton","Premier League","M",20,6,3,258,2,0,1.46,0.45,null,null,null,7,10,8,0,1,4],["José María Andrés","Brighton","Premier League","M",null,3,2,199,1,1,0.52,0.13,null,null,null,2,6,12,0,2,0],["Mats Wieffer","Brighton","Premier League","D",26,2,2,156,0,0,0.12,0.13,null,null,null,4,11,9,0,1,4],["Pascal Struijk","Brighton","Premier League","D",27,4,2,154,0,0,0.31,0.01,null,null,null,2,12,8,0,1,0],["Georginio","Brighton","Premier League","F",24,3,1,106,0,2,0.17,0.6,null,null,null,2,1,6,0,1,0],["João Pedro Loureiro","Brighton","Premier League","D",26,6,0,90,0,0,0.12,0.3,null,null,null,1,6,1,0,0,0],["Jack Hinshelwood","Brighton","Premier League","M",21,1,1,63,2,0,1.41,0.02,null,null,null,2,0,1,0,1,0],["Ibrahim Osman","Brighton","Premier League","M",21,3,0,40,0,0,0.05,0.07,null,null,null,1,0,3,0,0,1],["Promise David","Brighton","Premier League","F",25,2,0,23,0,0,0.42,0.0,null,null,null,0,0,0,0,0,0],["Zadok Yohanna","Brighton","Premier League","M",19,1,0,12,0,0,0.0,0.03,null,null,null,0,0,0,0,0,0],["Matt O'Riley","Brighton","Premier League","M",25,2,0,10,0,0,0.28,0.01,null,null,null,0,2,1,0,0,0],["Michael Svoboda","Brighton","Premier League","D",27,1,0,4,0,0,0.0,0.0,null,null,null,1,0,1,0,0,0],["Jaouen Hadjam","Brighton","Premier League","D",23,1,0,2,1,0,0.15,0.0,null,null,null,1,0,1,0,0,0],["Cole Palmer","Chelsea","Premier League","M",24,6,6,529,2,4,1.31,0.86,null,null,null,9,4,26,0,0,13],["Morgan Rogers","Chelsea","Premier League","M",24,6,6,520,4,1,1.9,1.3,null,null,null,8,7,29,0,0,13],["Maxence Lacroix","Chelsea","Premier League","D",26,6,5,454,0,1,0.15,0.22,null,null,null,11,44,12,0,0,11],["Emiliano Martinez","Chelsea","Premier League","G",34,5,5,450,0,0,0.0,0.01,null,null,null,0,1,52,21,0,11],["Levi Colwill","Chelsea","Premier League","D",23,5,5,431,0,0,0.01,0.05,null,null,null,4,27,17,0,0,10],["João Pedro","Chelsea","Premier League","F",25,5,5,431,5,3,2.77,0.29,null,null,null,1,3,10,0,0,10],["Pedro Neto","Chelsea","Premier League","M",26,6,5,414,1,1,0.84,0.64,null,null,null,8,9,17,0,0,9],["Wesley Fofana","Chelsea","Premier League","D",25,4,4,312,0,0,0.0,0.08,null,null,null,7,40,11,0,0,7],["Josh Acheampong","Chelsea","Premier League","D",20,5,3,311,0,0,0.0,0.05,null,null,null,11,15,14,0,0,8],["Pep Chavarria","Chelsea","Premier League","D",28,6,2,298,0,1,0.04,0.31,null,null,null,5,17,8,0,0,5],["Reece James","Chelsea","Premier League","D",26,4,3,292,0,0,0.33,0.26,null,null,null,2,11,15,0,0,7],["Roméo Lavia","Chelsea","Premier League","M",22,5,4,276,1,0,0.75,0.11,null,null,null,7,12,15,0,0,8],["Malo Gusto","Chelsea","Premier League","D",23,5,3,274,0,0,0.08,0.12,null,null,null,4,11,13,0,0,7],["Jorrel Hato","Chelsea","Premier League","D",20,4,4,258,0,2,0.01,0.21,null,null,null,7,11,9,0,0,9],["Jordan Henderson","Chelsea","Premier League","M",36,2,2,180,2,1,0.14,0.13,null,null,null,1,7,10,0,0,4],["Valentín Barco","Chelsea","Premier League","M",22,3,1,115,0,0,0.07,0.11,null,null,null,3,4,5,0,0,3],["Danny Welbeck","Chelsea","Premier League","F",35,4,1,92,0,0,0.0,0.14,null,null,null,1,2,2,0,0,1],["Robert Sánchez","Chelsea","Premier League","G",28,1,1,90,0,0,0.0,0.01,null,null,null,0,1,5,4,0,2],["Moisés Caicedo","Chelsea","Premier League","M",24,2,1,84,0,0,0.01,0.0,null,null,null,4,5,2,0,0,1],["Estêvão","Chelsea","Premier League","M",19,5,0,29,0,0,0.07,0.07,null,null,null,1,0,1,0,0,1],["Geovany Quenda","Chelsea","Premier League","M",19,2,0,27,0,0,0.03,0.01,null,null,null,0,1,0,0,0,2],["Marco Palestra","Chelsea","Premier League","D",21,1,0,18,0,0,0.0,0.0,null,null,null,0,0,1,0,0,0],["Mahdi Nicoll-Jazuli","Chelsea","Premier League","M",null,1,0,3,0,0,0.0,0.0,null,null,null,2,0,0,0,0,1],["Carl Rushworth","Coventry","Premier League","G",25,6,6,540,0,1,0.0,0.03,null,null,null,0,4,63,13,1,11],["Jay Dasilva","Coventry","Premier League","D",28,6,6,534,1,1,0.5,0.54,null,null,null,7,19,16,0,1,11],["Bobby Thomas","Coventry","Premier League","D",25,6,6,527,0,0,0.49,0.31,null,null,null,4,70,20,0,2,10],["Matt Grimes","Coventry","Premier League","M",31,6,6,525,0,0,0.12,0.14,null,null,null,10,15,18,0,1,10],["Milan van Ewijk","Coventry","Premier League","D",26,5,5,450,0,1,0.0,0.31,null,null,null,8,33,14,0,0,11],["Jack Rudoni","Coventry","Premier League","M",25,6,5,379,1,0,1.71,1.15,null,null,null,4,9,23,0,2,5],["Ethan Pinnock","Coventry","Premier League","D",33,5,4,372,0,0,0.12,0.0,null,null,null,4,44,7,0,1,8],["Aurèle Amenda","Coventry","Premier League","D",23,4,4,360,0,0,0.02,0.39,null,null,null,1,23,11,0,0,10],["Caleb Yirenkyi","Coventry","Premier League","M",20,6,4,342,0,0,0.03,0.16,null,null,null,4,10,20,0,2,6],["Frank Onyeka","Coventry","Premier League","M",28,5,4,326,0,0,0.06,0.02,null,null,null,5,9,15,0,1,7],["Brandon Thomas-Asante","Coventry","Premier League","F",27,6,3,317,0,1,0.36,0.07,null,null,null,5,15,15,0,1,7],["Ephron Mason-Clark","Coventry","Premier League","M",27,5,5,291,0,0,0.51,0.12,null,null,null,0,6,11,0,1,3],["Taiwo Awoniyi","Coventry","Premier League","F",29,4,3,232,0,0,1.3,0.04,null,null,null,1,3,7,0,0,7],["Loum Tchaouna","Coventry","Premier League","M",23,4,2,211,0,0,0.23,0.18,null,null,null,1,6,11,0,0,3],["Ellis Simms","Coventry","Premier League","F",25,4,1,116,1,0,0.4,0.01,null,null,null,0,1,2,0,0,3],["Sidiki Cherif","Coventry","Premier League","F",19,2,1,107,1,1,0.33,0.0,null,null,null,0,1,2,0,0,4],["Stephen Mfuni","Coventry","Premier League","D",null,2,1,97,1,0,0.21,0.01,null,null,null,1,8,3,0,1,0],["Tatsuhiro Sakamoto","Coventry","Premier League","M",29,2,0,60,0,0,0.02,0.02,null,null,null,2,2,5,0,0,2],["Victor Torp","Coventry","Premier League","M",27,4,0,60,0,0,0.0,0.25,null,null,null,0,1,3,0,0,2],["Gustavo Hamer","Coventry","Premier League","M",29,3,0,32,0,0,0.0,0.02,null,null,null,1,0,2,0,0,1],["Joel Latibeaudiere","Coventry","Premier League","D",26,1,0,1,0,0,0.0,0.0,null,null,null,0,2,0,0,0,0],["Chris Richards","Crystal Palace","Premier League","D",26,6,6,540,0,0,0.14,0.09,null,null,null,8,56,17,0,1,12],["Daichi Kamada","Crystal Palace","Premier League","M",30,6,6,530,1,3,0.81,0.42,null,null,null,13,6,28,0,1,11],["Adam Wharton","Crystal Palace","Premier League","M",22,6,6,526,0,1,0.15,1.01,null,null,null,12,18,18,0,1,11],["Tyrick Mitchell","Crystal Palace","Premier League","D",27,6,6,509,2,0,0.78,0.27,null,null,null,18,20,28,0,1,11],["Anan Khalaili","Crystal Palace","Premier League","D",22,6,5,469,1,0,1.16,0.52,null,null,null,22,26,30,0,1,9],["Jaydee Canvot","Crystal Palace","Premier League","D",20,5,5,450,0,0,0.05,0.14,null,null,null,11,33,15,0,1,9],["Yeremy","Crystal Palace","Premier League","M",23,6,5,389,1,2,0.87,0.72,null,null,null,7,6,20,0,1,7],["Jørgen Strand Larsen","Crystal Palace","Premier League","F",26,6,4,380,1,1,1.41,0.53,null,null,null,3,9,8,0,1,6],["Quinten Timber","Crystal Palace","Premier League","M",null,4,4,343,0,1,0.38,0.14,null,null,null,13,8,20,0,1,6],["Dean Henderson","Crystal Palace","Premier League","G",29,3,3,270,0,0,0.0,0.0,null,null,null,0,6,31,12,0,8],["Walter Benitez","Crystal Palace","Premier League","G",33,3,3,270,0,0,0.0,0.0,null,null,null,0,4,18,9,1,4],["Takehiro Tomiyasu","Crystal Palace","Premier League","D",27,4,2,189,0,0,0.0,0.03,null,null,null,2,15,7,0,0,5],["Eddie Nketiah","Crystal Palace","Premier League","F",27,5,3,182,0,1,1.1,0.6,null,null,null,4,2,6,0,0,7],["Axel Disasi","Crystal Palace","Premier League","D",28,3,2,139,0,0,0.0,0.04,null,null,null,5,15,11,0,0,6],["Jefferson Lerma","Crystal Palace","Premier League","M",31,3,1,122,1,0,0.77,0.0,null,null,null,3,13,8,0,0,2],["Honest Ahanor","Crystal Palace","Premier League","D",null,2,1,108,0,0,0.0,0.01,null,null,null,2,13,4,0,0,3],["Dwight McNeil","Crystal Palace","Premier League","M",26,3,1,85,0,0,0.05,0.02,null,null,null,0,4,3,0,0,3],["Chadi Riad","Crystal Palace","Premier League","D",23,1,1,72,0,0,0.0,0.01,null,null,null,1,6,3,0,0,2],["Jean-Philippe Mateta","Crystal Palace","Premier League","F",29,1,1,62,0,0,0.7,0.02,null,null,null,2,1,2,0,0,2],["Evann Guessand","Crystal Palace","Premier League","M",25,2,0,54,0,0,0.03,0.03,null,null,null,1,1,0,0,0,1],["Will Hughes","Crystal Palace","Premier League","M",31,2,0,29,0,0,0.0,0.04,null,null,null,1,3,3,0,0,1],["Ben Chilwell","Crystal Palace","Premier League","D",null,2,0,29,1,0,0.27,0.01,null,null,null,0,1,0,0,0,1],["Zavier Gozo","Crystal Palace","Premier League","M",19,2,0,28,0,0,0.0,0.0,null,null,null,1,0,0,0,0,2],["Oscar Mingueza","Crystal Palace","Premier League","D",27,2,0,16,0,0,0.0,0.0,null,null,null,2,0,1,0,0,1],["Ismaïla Sarr","Crystal Palace","Premier League","M",28,2,0,15,0,0,0.0,0.01,null,null,null,0,0,2,0,0,0],["Darío Osorio","Crystal Palace","Premier League","M",null,1,0,1,0,0,0.0,0.0,null,null,null,1,0,0,0,0,0],["Jordan Pickford","Everton","Premier League","G",32,6,6,540,0,0,0.0,0.02,null,null,null,0,7,64,17,3,5],["James Tarkowski","Everton","Premier League","D",33,6,6,540,1,1,0.18,0.05,null,null,null,13,55,21,0,3,5],["Jarrad Branthwaite","Everton","Premier League","D",24,6,6,540,0,0,0.22,0.04,null,null,null,6,58,20,0,3,5],["Kiernan Dewsbury-Hall","Everton","Premier League","M",28,6,6,540,2,1,1.39,0.89,null,null,null,13,6,33,0,3,5],["Harrison Armstrong","Everton","Premier League","M",19,6,6,523,0,1,0.41,0.56,null,null,null,9,17,25,0,3,5],["Thierno Barry","Everton","Premier League","F",23,6,6,502,3,0,4.4,0.16,null,null,null,1,8,11,0,3,5],["Vitalii Mykolenko","Everton","Premier League","D",27,5,5,450,0,0,0.04,0.16,null,null,null,14,25,30,0,3,3],["James Garner","Everton","Premier League","M",25,6,5,418,0,0,0.24,0.48,null,null,null,16,11,30,0,2,4],["Tyrique George","Everton","Premier League","M",20,6,4,333,1,0,0.35,0.33,null,null,null,1,5,14,0,2,4],["Brennan Johnson","Everton","Premier League","M",25,6,4,303,0,0,1.07,0.39,null,null,null,7,9,15,0,2,2],["Ainsley Maitland-Niles","Everton","Premier League","D",null,4,3,254,1,1,0.06,0.73,null,null,null,6,11,7,0,2,3],["Merlin Röhl","Everton","Premier League","M",24,3,3,249,0,0,0.0,0.2,null,null,null,5,6,13,0,1,2],["Jack Grealish","Everton","Premier League","M",31,5,2,220,0,0,0.07,0.66,null,null,null,4,2,12,0,1,3],["Hayden Hackney","Everton","Premier League","M",24,6,1,149,0,1,0.05,0.15,null,null,null,3,4,5,0,1,1],["Michael Keane","Everton","Premier League","D",33,1,1,90,0,0,0.01,0.01,null,null,null,2,5,5,0,0,2],["Norberto Bercique Gomes","Everton","Premier League","F",28,2,0,31,0,0,0.09,0.0,null,null,null,0,1,0,0,0,0],["Jake O'Brien","Everton","Premier League","D",25,3,0,28,0,0,0.0,0.01,null,null,null,0,2,2,0,0,0],["Tyler Dibling","Everton","Premier League","M",20,2,0,28,0,0,0.17,0.24,null,null,null,0,0,1,0,0,0],["Carlos Alcaraz","Everton","Premier League","M",23,3,0,9,0,0,0.07,0.02,null,null,null,1,0,3,0,0,0],["Bernd Leno","Fulham","Premier League","G",34,6,6,540,0,0,0.0,0.0,null,null,null,0,7,50,19,1,10],["Calvin Bassey","Fulham","Premier League","D",26,6,6,540,0,1,0.13,0.1,null,null,null,10,31,22,0,1,10],["Gonzalo","Fulham","Premier League","F",22,6,6,511,1,0,3.0,0.59,null,null,null,2,7,10,0,3,7],["Josh King","Fulham","Premier League","M",19,6,6,500,2,0,1.54,0.74,null,null,null,7,5,19,0,3,7],["Alex Iwobi","Fulham","Premier League","M",30,6,6,494,0,0,0.39,1.41,null,null,null,7,6,27,0,3,7],["Sander Berge","Fulham","Premier League","M",28,6,5,439,0,0,0.27,0.39,null,null,null,6,12,10,0,2,7],["Antonee Robinson","Fulham","Premier League","D",29,5,5,429,0,0,0.26,0.3,null,null,null,13,18,20,0,1,8],["Oscar Bobb","Fulham","Premier League","M",23,6,6,418,0,0,1.03,1.18,null,null,null,10,5,18,0,4,6],["Timothy Castagne","Fulham","Premier League","D",30,5,5,408,0,2,0.67,0.39,null,null,null,6,23,18,0,2,7],["Shea Charles","Fulham","Premier League","M",22,6,4,373,0,0,0.14,0.17,null,null,null,6,23,25,0,2,5],["David Affengruber","Fulham","Premier League","D",null,3,3,270,0,0,0.08,0.03,null,null,null,6,28,10,0,1,3],["César Palacios","Fulham","Premier League","M",21,4,3,226,1,0,0.98,0.03,null,null,null,3,4,10,0,0,7],["Joachim Andersen","Fulham","Premier League","D",30,3,2,190,0,0,0.0,0.1,null,null,null,2,18,9,0,0,5],["Ryan Sessegnon","Fulham","Premier League","D",26,4,1,140,1,0,0.26,0.46,null,null,null,1,7,9,0,0,3],["Kenny Tete","Fulham","Premier League","D",31,2,1,117,0,0,0.0,0.22,null,null,null,1,9,3,0,0,2],["Jorge Cuenca","Fulham","Premier League","D",26,1,1,90,0,0,0.0,0.03,null,null,null,1,9,3,0,0,3],["Kevin","Fulham","Premier League","M",23,5,0,75,0,0,0.22,0.12,null,null,null,4,1,5,0,0,3],["Rodrigo Muniz","Fulham","Premier League","F",25,5,0,52,0,0,0.4,0.0,null,null,null,0,3,0,0,0,3],["Emile Smith Rowe","Fulham","Premier League","M",26,4,0,41,0,0,0.06,0.02,null,null,null,0,1,2,0,0,2],["Hugo Larsson","Fulham","Premier League","M",null,4,0,40,0,0,0.19,0.23,null,null,null,1,2,3,0,0,3],["Ángel","Fulham","Premier League","M",null,1,0,19,0,0,0.0,0.0,null,null,null,0,1,1,0,0,2],["Konstantinos Tzolakis","Hull","Premier League","G",23,6,6,540,0,0,0.0,0.0,null,null,null,1,3,80,21,3,6],["Oli McBurnie","Hull","Premier League","F",30,6,6,531,0,2,1.23,0.22,null,null,null,4,9,13,0,3,6],["John Egan","Hull","Premier League","D",33,6,6,527,0,0,0.09,0.16,null,null,null,9,56,14,0,3,6],["Semi Ajayi","Hull","Premier League","D",32,6,6,513,1,0,0.66,0.03,null,null,null,8,26,18,0,3,6],["Regan Slater","Hull","Premier League","M",27,6,6,511,0,1,0.21,0.61,null,null,null,13,10,16,0,3,6],["Ryan Giles","Hull","Premier League","D",26,6,6,507,0,1,0.02,0.43,null,null,null,5,19,18,0,3,5],["Lewie Coyle","Hull","Premier League","D",30,6,6,438,0,0,0.13,0.07,null,null,null,4,9,15,0,2,6],["Mohamed Belloumi","Hull","Premier League","M",24,6,5,420,3,2,0.89,0.47,null,null,null,16,15,15,0,3,4],["Nobel Mendy","Hull","Premier League","D",22,5,5,339,1,0,0.62,0.0,null,null,null,7,45,8,0,2,3],["Elliot Stroud","Hull","Premier League","M",24,5,4,275,0,1,0.06,0.11,null,null,null,5,4,15,0,2,2],["Matt Crooks","Hull","Premier League","M",32,4,4,267,0,0,0.0,0.13,null,null,null,10,10,7,0,1,5],["Sorba Thomas","Hull","Premier League","M",null,4,2,204,0,1,0.22,0.64,null,null,null,2,1,15,0,0,5],["Lucas Herrington","Hull","Premier League","D",19,5,1,197,0,0,0.02,0.04,null,null,null,2,14,6,0,0,3],["Lucas Gourna-Douath","Hull","Premier League","M",23,3,1,138,0,0,0.03,0.03,null,null,null,5,5,7,0,1,0],["Tim Iroegbunam","Hull","Premier League","M",23,4,0,95,0,0,0.12,0.02,null,null,null,3,1,9,0,0,1],["Mohamed-Ali Cho","Hull","Premier League","M",null,4,0,72,1,0,0.79,0.36,null,null,null,0,1,1,0,0,1],["Joe Gelhardt","Hull","Premier League","M",24,2,1,71,1,0,0.9,0.06,null,null,null,3,2,6,0,0,1],["Cody Drameh","Hull","Premier League","D",24,2,0,65,0,0,0.05,0.0,null,null,null,1,5,4,0,0,0],["Hidemasa Morita","Hull","Premier League","M",31,2,1,60,0,0,0.0,0.0,null,null,null,0,4,3,0,0,0],["Liam Millar","Hull","Premier League","M",27,2,0,50,1,0,0.58,0.0,null,null,null,1,2,1,0,0,0],["Brooke Norton-Cuffy","Hull","Premier League","D",null,2,0,34,0,0,0.05,0.0,null,null,null,0,1,4,0,0,0],["Paddy McNair","Hull","Premier League","D",31,1,0,26,0,0,0.0,0.0,null,null,null,0,2,1,0,0,0],["Robinio Vaz","Hull","Premier League","F",null,3,0,24,0,0,0.0,0.01,null,null,null,0,0,2,0,0,0],["Jens Hjertø-Dahl","Hull","Premier League","M",20,1,0,8,0,0,0.0,0.0,null,null,null,0,0,1,0,0,0],["Matt Targett","Hull","Premier League","D",31,1,0,5,0,0,0.0,0.0,null,null,null,0,0,1,0,0,0],["Issa Diop","Ipswich","Premier League","D",29,6,6,540,0,0,0.1,0.17,null,null,null,4,47,27,0,0,12],["Dara O'Shea","Ipswich","Premier League","D",27,6,6,540,1,0,0.3,0.28,null,null,null,8,49,25,0,0,12],["Leif Davis","Ipswich","Premier League","D",26,6,6,540,2,2,1.64,0.47,null,null,null,4,24,11,0,0,12],["Saša Lukić","Ipswich","Premier League","M",30,6,6,490,0,1,0.02,0.46,null,null,null,11,20,19,0,0,11],["Julio Enciso","Ipswich","Premier League","M",22,6,6,483,0,2,1.33,1.61,null,null,null,3,5,25,0,0,12],["Emersonn","Ipswich","Premier League","F",22,6,6,387,2,1,2.05,0.13,null,null,null,4,5,5,0,0,7],["Kjell Scherpen","Ipswich","Premier League","G",26,4,4,360,0,0,0.0,0.01,null,null,null,0,8,39,15,0,10],["Jacob Greaves","Ipswich","Premier League","D",26,4,4,357,0,0,0.0,0.06,null,null,null,5,25,12,0,0,10],["Abdul Fatawu","Ipswich","Premier League","M",22,5,5,352,0,1,0.17,1.11,null,null,null,9,8,11,0,0,10],["Daizen Maeda","Ipswich","Premier League","M",28,6,4,339,0,0,0.71,0.04,null,null,null,10,8,6,0,0,9],["Exequiel Palacios","Ipswich","Premier League","M",null,5,3,302,0,0,0.0,0.11,null,null,null,11,15,25,0,0,7],["Abdoul Ouattara","Ipswich","Premier League","D",20,6,2,221,1,0,0.04,0.08,null,null,null,5,10,19,0,0,3],["Jack Clarke","Ipswich","Premier League","M",25,5,2,197,1,1,0.3,0.4,null,null,null,2,4,6,0,0,2],["Christian Walton","Ipswich","Premier League","G",30,2,2,180,0,0,0.0,0.02,null,null,null,0,3,23,4,0,2],["Marcelino Núñez","Ipswich","Premier League","M",26,2,2,140,0,0,0.03,0.05,null,null,null,3,8,10,0,0,4],["Jaden Philogene","Ipswich","Premier League","M",24,3,1,114,0,0,0.11,0.03,null,null,null,1,1,5,0,0,2],["Chuba Akpom","Ipswich","Premier League","F",31,4,0,97,1,0,1.3,0.0,null,null,null,1,0,3,0,0,4],["Florentino","Ipswich","Premier League","M",27,3,1,92,0,0,0.0,0.14,null,null,null,4,4,3,0,0,1],["Zian Flemming","Ipswich","Premier League","F",null,4,0,79,1,0,0.64,0.01,null,null,null,1,1,4,0,0,1],["Kasey McAteer","Ipswich","Premier League","M",24,3,0,42,0,0,0.05,0.0,null,null,null,1,0,4,0,0,0],["Sindre Walle Egeli","Ipswich","Premier League","F",20,2,0,19,0,0,0.1,0.0,null,null,null,0,0,1,0,0,0],["Darnell Furlong","Ipswich","Premier League","D",30,1,0,17,0,0,0.0,0.0,null,null,null,1,2,0,0,0,1],["Tarik Muharemović","Leeds","Premier League","D",23,6,6,540,0,1,0.49,0.05,null,null,null,5,63,19,0,2,5],["Ethan Ampadu","Leeds","Premier League","M",26,6,6,540,0,1,0.11,0.3,null,null,null,13,29,26,0,2,5],["James Trafford","Leeds","Premier League","G",24,6,6,540,0,0,0.0,0.01,null,null,null,0,7,69,24,2,5],["Anton Stach","Leeds","Premier League","M",27,6,6,537,1,0,1.06,0.36,null,null,null,16,28,24,0,3,4],["James Justin","Leeds","Premier League","D",28,6,6,528,1,0,0.41,0.42,null,null,null,17,33,17,0,2,5],["Dominic Calvert-Lewin","Leeds","Premier League","F",29,6,6,509,2,1,3.0,0.08,null,null,null,0,11,15,0,3,4],["Jayden Bogle","Leeds","Premier League","D",26,6,6,450,2,0,1.49,0.12,null,null,null,5,12,16,0,4,3],["Nico Elvedi","Leeds","Premier League","D",30,5,4,411,0,0,0.12,0.58,null,null,null,3,31,10,0,1,5],["Noah Okafor","Leeds","Premier League","M",26,6,5,369,1,0,0.23,0.28,null,null,null,7,3,10,0,3,3],["Gabriel Gudmundsson","Leeds","Premier League","D",27,4,4,342,0,1,0.07,0.25,null,null,null,10,7,15,0,2,3],["Tanaka","Leeds","Premier League","M",28,5,4,325,0,2,0.81,0.05,null,null,null,10,12,14,0,2,3],["Brenden Aaronson","Leeds","Premier League","M",25,6,2,213,0,0,0.01,0.02,null,null,null,4,2,12,0,1,3],["Jaka Bijol","Leeds","Premier League","D",27,4,2,168,0,0,0.11,0.0,null,null,null,3,21,7,0,1,2],["Harry Wilson","Leeds","Premier League","M",29,5,1,164,0,0,0.01,0.09,null,null,null,4,3,4,0,1,1],["Joe Rodon","Leeds","Premier League","D",28,2,2,123,0,0,0.03,0.06,null,null,null,1,10,2,0,1,0],["Lukas Nmecha","Leeds","Premier League","F",27,5,0,75,0,1,0.27,0.15,null,null,null,1,0,5,0,0,1],["Daniel James","Leeds","Premier League","M",28,3,0,52,0,0,0.35,0.01,null,null,null,0,1,4,0,0,1],["Melvin Bard","Leeds","Premier League","D",null,1,0,18,0,0,0.0,0.0,null,null,null,1,1,2,0,0,1],["Sean Longstaff","Leeds","Premier League","M",28,2,0,10,0,0,0.0,0.0,null,null,null,0,0,0,0,0,1],["Jean-Mattéo Bahoya","Leeds","Premier League","M",null,2,0,5,0,0,0.0,0.0,null,null,null,0,0,0,0,0,0],["Alisson Becker","Liverpool","Premier League","G",34,6,6,540,0,0,0.0,0.0,null,null,null,0,11,53,15,3,7],["Virgil","Liverpool","Premier League","D",35,6,6,540,0,0,0.25,0.09,null,null,null,5,47,21,0,3,7],["Jeremy Jacquet","Liverpool","Premier League","D",21,6,6,502,0,0,0.27,0.14,null,null,null,14,34,21,0,3,7],["Milos Kerkez","Liverpool","Premier League","D",22,6,5,475,0,0,0.07,0.1,null,null,null,11,27,13,0,2,7],["Florian Wirtz","Liverpool","Premier League","M",23,6,6,467,0,2,1.15,0.6,null,null,null,9,4,27,0,3,5],["Dominik Szoboszlai","Liverpool","Premier League","M",25,5,5,440,1,0,1.42,0.82,null,null,null,6,13,22,0,3,4],["Alexander Isak","Liverpool","Premier League","F",27,5,5,413,4,0,3.54,0.08,null,null,null,1,3,3,0,3,4],["Alexis Mac Allister","Liverpool","Premier League","M",27,6,4,396,0,0,0.37,0.5,null,null,null,12,13,24,0,2,5],["Cody Gakpo","Liverpool","Premier League","M",27,5,4,370,1,3,0.64,1.71,null,null,null,8,9,15,0,2,4],["Ronald Araujo","Liverpool","Premier League","D",27,6,4,358,0,0,0.0,0.07,null,null,null,6,24,19,0,3,2],["Victor Munoz","Liverpool","Premier League","M",23,6,4,347,1,1,0.57,0.32,null,null,null,4,8,10,0,1,5],["Bradley Barcola","Liverpool","Premier League","M",null,4,3,255,0,0,0.31,0.15,null,null,null,6,1,11,0,2,3],["Ryan Gravenberch","Liverpool","Premier League","M",24,6,3,251,0,1,0.17,0.1,null,null,null,5,13,15,0,0,5],["Jeremie Frimpong","Liverpool","Premier League","D",25,4,2,193,0,0,0.01,0.23,null,null,null,4,8,7,0,0,5],["Rio Ngumoha","Liverpool","Premier League","M",18,4,1,114,0,0,0.15,0.05,null,null,null,1,1,2,0,0,3],["Lewis Koumas","Liverpool","Premier League","M",21,4,1,96,0,0,0.37,0.01,null,null,null,0,1,2,0,0,2],["Kostas Tsimikas","Liverpool","Premier League","D",30,2,1,64,0,0,0.04,0.02,null,null,null,1,2,3,0,0,0],["Trey Nyoni","Liverpool","Premier League","M",19,4,0,62,0,0,0.0,0.0,null,null,null,3,7,2,0,0,2],["Joe Gomez","Liverpool","Premier League","D",29,1,0,2,0,0,0.0,0.0,null,null,null,0,1,1,0,0,0],["Federico Chiesa","Liverpool","Premier League","M",28,1,0,2,0,0,0.0,0.0,null,null,null,0,0,0,0,0,0],["Gianluigi Donnarumma","Man City","Premier League","G",27,6,6,540,0,0,0.0,0.0,null,null,null,0,4,41,20,3,5],["Marc Guéhi","Man City","Premier League","D",26,6,6,540,1,1,0.95,0.4,null,null,null,3,30,22,0,3,5],["Rúben","Man City","Premier League","D",29,6,6,540,0,0,0.29,0.75,null,null,null,1,29,18,0,3,5],["Antoine Semenyo","Man City","Premier League","M",26,6,6,540,2,3,0.34,1.47,null,null,null,6,2,17,0,3,5],["Erling Haaland","Man City","Premier League","F",26,6,6,529,6,0,4.82,0.54,null,null,null,1,12,12,0,3,5],["Elliot Anderson","Man City","Premier League","M",23,6,6,503,0,1,0.21,0.74,null,null,null,14,19,29,0,3,5],["Joško Gvardiol","Man City","Premier League","D",24,6,5,458,1,4,0.32,0.79,null,null,null,11,20,22,0,2,5],["Iliman Ndiaye","Man City","Premier League","M",26,6,5,440,0,2,0.38,0.59,null,null,null,8,10,27,0,2,4],["Rayan Cherki","Man City","Premier League","M",23,6,5,392,4,2,1.3,1.7,null,null,null,3,3,12,0,2,4],["Enzo","Man City","Premier League","M",25,5,4,350,1,0,0.37,0.59,null,null,null,5,9,16,0,3,3],["Matheus Nunes","Man City","Premier League","D",28,4,3,303,0,0,0.0,0.07,null,null,null,5,21,11,0,2,3],["Abdukodir Khusanov","Man City","Premier League","D",22,3,3,268,0,0,0.0,0.06,null,null,null,8,9,13,0,1,2],["Nico O'Reilly","Man City","Premier League","D",21,5,3,228,0,0,0.87,0.43,null,null,null,4,4,13,0,1,2],["Phil Foden","Man City","Premier League","M",26,4,3,217,0,2,1.61,0.88,null,null,null,4,2,8,0,0,2],["Rico Lewis","Man City","Premier League","D",21,1,1,56,0,0,0.17,0.02,null,null,null,0,2,0,0,0,1],["Jérémy Doku","Man City","Premier League","M",24,2,0,49,1,1,0.28,0.41,null,null,null,0,1,1,0,0,0],["Mateo Kovačić","Man City","Premier League","M",32,2,0,42,0,0,0.0,0.02,null,null,null,0,0,2,0,0,0],["Ayyoub Bouaddi","Man City","Premier League","M",19,3,0,32,0,0,0.02,0.15,null,null,null,0,3,3,0,0,0],["Ryan McAidoo","Man City","Premier League","M",null,2,0,11,0,0,0.1,0.0,null,null,null,2,0,2,0,0,0],["Allan","Man City","Premier League","M",null,1,0,10,0,0,0.0,0.0,null,null,null,0,0,0,0,0,0],["Vitor de","Man City","Premier League","D",20,1,0,1,0,0,0.0,0.0,null,null,null,0,0,0,0,0,0],["Kaden Braithwaite","Man City","Premier League","D",null,1,0,1,0,0,0.0,0.0,null,null,null,0,0,1,0,0,0],["Senne Lammens","Man United","Premier League","G",24,6,6,540,0,0,0.0,0.0,null,null,null,0,6,44,18,0,9],["Harry Maguire","Man United","Premier League","D",33,6,6,540,0,1,0.32,0.46,null,null,null,4,36,25,0,0,9],["Bruno Fernandes","Man United","Premier League","M",32,6,6,540,3,1,2.58,1.46,null,null,null,6,4,25,0,0,9],["Bryan Mbeumo","Man United","Premier League","M",27,6,6,540,3,1,3.31,0.9,null,null,null,5,8,15,0,0,9],["Matheus Cunha","Man United","Premier League","M",27,6,6,497,1,3,0.81,0.94,null,null,null,7,3,17,0,1,6],["Youri Tielemans","Man United","Premier League","M",29,6,6,460,0,0,0.65,0.66,null,null,null,12,11,38,0,0,8],["Lisandro Martinez","Man United","Premier League","D",28,5,5,450,0,0,0.21,0.18,null,null,null,5,26,15,0,0,7],["Kobbie Mainoo","Man United","Premier League","M",21,6,5,444,0,1,0.3,0.55,null,null,null,11,12,50,0,0,5],["Luke Shaw","Man United","Premier League","D",31,5,5,425,0,1,0.03,0.59,null,null,null,9,27,8,0,0,6],["Diogo Dalot","Man United","Premier League","D",27,6,4,377,0,0,0.24,0.3,null,null,null,7,14,21,0,0,5],["Marcus Rashford","Man United","Premier League","M",28,6,4,352,0,0,0.78,0.43,null,null,null,4,4,10,0,1,3],["Patrick Dorgu","Man United","Premier League","M",21,5,2,171,0,1,0.78,0.09,null,null,null,8,8,4,0,0,6],["Noussair Mazraoui","Man United","Premier League","D",28,3,1,97,0,0,0.22,0.06,null,null,null,2,4,3,0,0,4],["Ayden Heaven","Man United","Premier League","D",20,2,1,91,0,0,0.12,0.04,null,null,null,2,1,4,0,0,2],["Andrey Nascimento","Man United","Premier League","M",22,3,1,82,0,0,0.0,0.24,null,null,null,4,7,7,0,0,4],["Leny Yoro","Man United","Premier League","D",20,3,1,80,0,0,0.0,0.03,null,null,null,5,12,7,0,0,2],["Benjamin Šeško","Man United","Premier League","F",23,4,0,76,1,0,0.39,0.01,null,null,null,0,0,5,0,0,3],["Amad","Man United","Premier League","M",24,1,1,58,0,0,0.06,0.03,null,null,null,1,1,2,0,0,0],["Joshua Zirkzee","Man United","Premier League","F",25,3,0,51,0,0,0.12,0.07,null,null,null,0,2,4,0,0,1],["Carlos Baleba","Man United","Premier League","M",22,1,0,31,0,0,0.06,0.01,null,null,null,2,4,6,0,0,1],["Mason Mount","Man United","Premier League","M",27,1,0,10,0,0,0.09,0.01,null,null,null,0,0,1,0,0,0],["Shea Lacey","Man United","Premier League","M",19,1,0,10,0,0,0.0,0.0,null,null,null,0,0,1,0,0,0],["Malick Thiaw","Newcastle","Premier League","D",25,6,6,540,0,0,0.0,0.1,null,null,null,0,53,15,0,1,13],["Sven Botman","Newcastle","Premier League","D",26,6,6,540,1,0,0.1,0.19,null,null,null,6,63,15,0,1,13],["Harvey Barnes","Newcastle","Premier League","M",28,6,6,540,1,3,0.97,0.83,null,null,null,5,15,20,0,1,13],["Lukás Horníček","Newcastle","Premier League","G",24,6,6,540,0,0,0.0,0.0,null,null,null,0,12,41,21,1,13],["Lewis Hall","Newcastle","Premier League","D",22,6,6,539,1,1,0.27,0.83,null,null,null,14,38,44,0,1,13],["Yoane Wissa","Newcastle","Premier League","F",30,6,6,518,1,1,2.5,0.07,null,null,null,6,6,15,0,1,10],["Lewis Miley","Newcastle","Premier League","M",20,6,6,454,0,0,0.05,0.15,null,null,null,8,21,29,0,1,10],["Amar Dedić","Newcastle","Premier League","D",24,5,4,358,0,1,0.16,0.1,null,null,null,8,20,20,0,1,9],["Joe Willock","Newcastle","Premier League","M",27,6,4,342,2,0,1.12,0.36,null,null,null,6,5,9,0,1,7],["Nico Gonzalez","Newcastle","Premier League","M",24,4,4,254,0,1,0.0,0.43,null,null,null,4,4,13,0,1,6],["Matias Fernandez-Pardo","Newcastle","Premier League","F",null,4,3,247,0,0,0.54,0.22,null,null,null,2,2,6,0,0,8],["Jacob Murphy","Newcastle","Premier League","M",31,6,3,239,0,0,0.29,0.56,null,null,null,4,4,12,0,0,7],["Anthony Elanga","Newcastle","Premier League","M",24,3,3,232,2,0,0.42,0.34,null,null,null,4,2,3,0,1,3],["Sean Steur","Newcastle","Premier League","M",18,5,2,223,0,0,0.0,0.06,null,null,null,4,9,8,0,1,5],["Bazoumana Touré","Newcastle","Premier League","M",20,4,0,81,1,0,0.37,0.08,null,null,null,2,1,5,0,0,3],["Jacob Ramsey","Newcastle","Premier League","M",25,3,0,69,1,0,0.17,0.16,null,null,null,2,3,6,0,0,1],["William Osula","Newcastle","Premier League","F",23,2,1,67,0,1,0.18,0.14,null,null,null,1,2,2,0,0,3],["Tino Livramento","Newcastle","Premier League","D",23,2,0,33,0,1,0.0,0.01,null,null,null,2,1,4,0,0,1],["Joelinton","Newcastle","Premier League","M",30,1,0,31,0,0,0.0,0.01,null,null,null,1,1,3,0,0,2],["Aladji Bamba","Newcastle","Premier League","M",20,3,0,27,0,0,0.0,0.0,null,null,null,3,3,2,0,0,1],["Fabian Schär","Newcastle","Premier League","D",34,2,0,25,0,0,0.0,0.01,null,null,null,0,7,0,0,0,2],["Nick Woltemade","Newcastle","Premier League","F",24,1,0,19,0,1,0.02,0.01,null,null,null,0,0,0,0,0,0],["Dan Burn","Newcastle","Premier League","D",34,1,0,1,0,0,0.0,0.0,null,null,null,0,0,0,0,0,0],["Matz Sels","Nott'm Forest","Premier League","G",34,6,6,540,0,0,0.0,0.01,null,null,null,0,7,52,15,1,8],["Neco Williams","Nott'm Forest","Premier League","D",25,6,6,540,0,1,0.58,0.9,null,null,null,15,16,30,0,1,8],["Morgan Gibbs-White","Nott'm Forest","Premier League","M",26,6,6,540,1,2,1.65,1.87,null,null,null,7,2,20,0,1,8],["Murillo","Nott'm Forest","Premier League","D",24,6,6,539,0,1,0.7,0.38,null,null,null,12,51,24,0,1,8],["James McAtee","Nott'm Forest","Premier League","M",23,6,6,506,0,0,0.42,1.01,null,null,null,9,12,33,0,2,7],["Xaver Schlager","Nott'm Forest","Premier League","M",29,6,5,441,0,0,0.31,0.25,null,null,null,17,13,27,0,1,8],["Ola Aina","Nott'm Forest","Premier League","D",30,5,5,388,0,0,0.06,0.54,null,null,null,12,19,19,0,1,6],["Dan Ndoye","Nott'm Forest","Premier League","M",25,6,6,387,2,0,1.94,0.97,null,null,null,2,3,15,0,1,6],["Jair Paula","Nott'm Forest","Premier League","D",21,4,4,360,0,0,0.05,0.02,null,null,null,7,29,8,0,1,4],["Liam Delap","Nott'm Forest","Premier League","F",23,5,4,348,1,0,1.9,0.41,null,null,null,2,5,10,0,1,6],["Daniel Muñoz","Nott'm Forest","Premier League","D",30,5,4,347,0,0,1.01,0.43,null,null,null,10,13,13,0,0,7],["Nikola Milenković","Nott'm Forest","Premier League","D",29,3,3,270,0,0,0.11,0.03,null,null,null,5,26,12,0,1,3],["Igor Jesus","Nott'm Forest","Premier League","F",25,5,2,257,1,0,1.25,0.08,null,null,null,2,5,8,0,0,3],["Ousmane Diomande","Nott'm Forest","Premier League","D",22,4,3,253,0,0,0.23,0.02,null,null,null,2,23,19,0,0,5],["Ibrahim Sangaré","Nott'm Forest","Premier League","M",28,4,1,129,0,0,0.09,0.04,null,null,null,1,5,6,0,0,1],["Chris Wood","Nott'm Forest","Premier League","F",34,5,0,80,0,0,0.55,0.01,null,null,null,0,0,2,0,0,1],["Luca Netz","Nott'm Forest","Premier League","D",23,3,0,27,0,0,0.0,0.02,null,null,null,1,0,1,0,0,1],["Callum Hudson-Odoi","Nott'm Forest","Premier League","M",25,2,0,19,0,0,0.0,0.02,null,null,null,0,0,0,0,0,0],["Arnaud Kalimuendo","Nott'm Forest","Premier League","F",24,2,0,8,0,0,0.0,0.0,null,null,null,1,0,1,0,0,0],["Nicolás Dominguez","Nott'm Forest","Premier League","M",28,1,0,1,0,0,0.0,0.0,null,null,null,0,0,0,0,0,0],["Robin Roefs","Sunderland","Premier League","G",23,6,6,540,0,0,0.0,0.01,null,null,null,0,8,44,8,1,12],["Granit Xhaka","Sunderland","Premier League","M",34,6,6,540,0,1,0.15,1.37,null,null,null,11,14,37,0,1,12],["Enzo Le Fée","Sunderland","Premier League","M",26,6,6,518,1,1,2.08,1.59,null,null,null,7,3,15,0,1,10],["Noah Sadiki","Sunderland","Premier League","M",21,6,6,500,0,0,0.44,0.28,null,null,null,8,12,17,0,1,11],["Daniel Ballard","Sunderland","Premier League","D",27,5,5,450,0,0,0.31,0.16,null,null,null,10,39,12,0,1,10],["Nordi Mukiele","Sunderland","Premier League","D",28,5,5,450,0,0,0.81,0.32,null,null,null,16,42,26,0,1,10],["Reinildo","Sunderland","Premier League","D",32,5,5,432,0,0,0.0,0.33,null,null,null,10,26,21,0,1,6],["Thomas Meunier","Sunderland","Premier League","D",35,6,6,429,0,1,0.49,0.58,null,null,null,4,16,16,0,1,8],["Brian Brobbey","Sunderland","Premier League","F",24,5,5,399,3,0,2.94,0.11,null,null,null,0,1,10,0,1,9],["Nilson Angulo","Sunderland","Premier League","M",23,6,6,385,1,1,0.6,0.13,null,null,null,7,6,14,0,1,8],["Kevin Danso","Sunderland","Premier League","D",28,4,4,360,0,0,0.26,0.2,null,null,null,2,23,15,0,0,10],["Trai Hume","Sunderland","Premier League","D",24,5,3,296,0,0,0.14,0.32,null,null,null,13,8,15,0,1,4],["Wilson Isidor","Sunderland","Premier League","F",26,6,1,207,1,1,1.67,0.01,null,null,null,2,0,6,0,0,5],["Malick Fofana","Sunderland","Premier League","M",null,4,0,116,0,0,0.42,0.02,null,null,null,2,2,5,0,0,4],["Dayann Methalie","Sunderland","Premier League","D",20,2,1,107,0,0,0.03,0.01,null,null,null,1,4,6,0,0,6],["Luke O'Nien","Sunderland","Premier League","D",31,1,1,66,0,0,0.01,0.01,null,null,null,1,4,4,0,0,1],["Chemsdine Talbi","Sunderland","Premier League","M",21,1,0,31,0,0,0.0,0.0,null,null,null,0,0,2,0,0,1],["Habib Diarra","Sunderland","Premier League","M",22,2,0,28,0,1,0.03,0.16,null,null,null,0,0,0,0,0,1],["Omar Alderete","Sunderland","Premier League","D",29,1,0,23,0,0,0.0,0.01,null,null,null,0,0,2,0,0,1],["Djiamgone Jocelin Ta Bi","Sunderland","Premier League","M",21,1,0,17,0,0,0.0,0.03,null,null,null,0,0,0,0,0,1],["Chris Rigg","Sunderland","Premier League","M",19,2,0,17,0,0,0.0,0.0,null,null,null,0,0,1,0,0,1],["Juan Angulo","Sunderland","Premier League","F",null,1,0,9,0,0,0.0,0.0,null,null,null,0,0,0,0,0,1],["Romaine Mundle","Sunderland","Premier League","M",23,1,0,1,0,0,0.17,0.0,null,null,null,0,1,0,0,0,0],["Jan Paul Van Hecke","Tottenham","Premier League","D",26,6,6,540,1,0,0.69,0.45,null,null,null,11,43,23,0,2,9],["Antonín Kinsky","Tottenham","Premier League","G",23,6,6,540,0,0,0.0,0.0,null,null,null,0,10,43,15,2,9],["Sandro Tonali","Tottenham","Premier League","M",26,6,6,517,0,1,0.25,0.89,null,null,null,12,13,26,0,2,9],["Archie Gray","Tottenham","Premier League","M",20,5,4,397,0,0,0.23,0.09,null,null,null,8,14,19,0,1,8],["Rodrigo Bentancur","Tottenham","Premier League","M",29,6,4,381,0,0,0.02,0.12,null,null,null,15,23,24,0,2,7],["Micky Van de Ven","Tottenham","Premier League","D",25,5,4,376,0,0,0.59,0.05,null,null,null,5,24,18,0,2,5],["Andrew Robertson","Tottenham","Premier League","D",32,5,4,366,0,1,0.13,0.43,null,null,null,5,15,15,0,1,7],["Omar Marmoush","Tottenham","Premier League","F",27,5,4,363,0,0,0.38,0.15,null,null,null,4,0,13,0,2,6],["Sávio","Tottenham","Premier League","M",22,4,4,330,0,0,0.54,0.95,null,null,null,0,3,13,0,2,4],["Dominic Solanke","Tottenham","Premier League","F",29,6,3,260,1,0,1.23,0.07,null,null,null,2,4,7,0,1,2],["Mathys Tel","Tottenham","Premier League","M",21,4,3,257,0,0,0.21,0.23,null,null,null,1,1,11,0,1,4],["Mateus Fernandes","Tottenham","Premier League","M",22,6,3,250,0,0,0.19,0.28,null,null,null,7,3,12,0,1,4],["Conor Gallagher","Tottenham","Premier League","M",26,4,3,207,1,0,0.84,0.15,null,null,null,10,4,17,0,1,3],["Pedro Porro","Tottenham","Premier League","D",27,3,3,198,0,0,0.37,0.16,null,null,null,3,6,5,0,1,2],["Mohammed Kudus","Tottenham","Premier League","M",26,5,1,188,0,1,0.39,0.43,null,null,null,4,0,15,0,1,3],["Marcos Senesi","Tottenham","Premier League","D",29,2,2,178,0,0,0.0,0.07,null,null,null,6,13,10,0,0,4],["Destiny Udogie","Tottenham","Premier League","D",23,4,2,159,0,0,0.0,0.28,null,null,null,2,8,7,0,1,2],["Lucas Bergvall","Tottenham","Premier League","M",20,4,2,143,0,0,0.12,0.29,null,null,null,5,4,10,0,1,2],["Mikey Moore","Tottenham","Premier League","M",19,2,1,89,0,0,0.4,0.02,null,null,null,1,0,2,0,0,4],["James Maddison","Tottenham","Premier League","M",29,4,0,75,0,0,0.06,0.05,null,null,null,7,3,5,0,0,2],["Richarlison","Tottenham","Premier League","F",29,1,1,67,0,0,0.0,0.0,null,null,null,0,1,0,0,0,3],["Mykhailo Mudryk","Tottenham","Premier League","M",25,1,0,16,0,0,0.0,0.0,null,null,null,0,0,0,0,0,0],["Tosin","Tottenham","Premier League","D",29,1,0,5,0,0,0.0,0.0,null,null,null,2,2,1,0,0,0]]};
+
+  var LEAGUE_ORDER = ["Premier League", "La Liga", "Bundesliga", "Serie A", "Ligue 1"];
+  var POS_NAME = { G: "goalkeeper", D: "defender", M: "midfielder", F: "forward" };
+  var POS_PLURAL = { G: "goalkeepers", D: "defenders", M: "midfielders", F: "forwards" };
+  var MET = {
+    xg: { t: "xG", k: "xg", f: 2 },
+    goals: { t: "Goals", k: "goals", f: 2 },
+    xa: { t: "xA", k: "xa", f: 2 },
+    assists: { t: "Assists", k: "assists", f: 2 },
+    shots: { t: "Shots", k: "shots", f: 1 },
+    kp: { t: "Key passes", k: "key_passes", f: 1 },
+    tackles: { t: "Tackles", k: "tackles", f: 1 },
+    cbi: { t: "Clearances, blocks, interceptions", s: "CBI", k: "cbi", f: 1 },
+    rec: { t: "Recoveries", k: "recoveries", f: 1 },
+    saves: { t: "Saves", k: "saves", f: 1 },
+    gc: { t: "Goals conceded", s: "Conceded", k: "goals_conceded", f: 2, low: true },
+    cs: { t: "Clean sheets", s: "Clean sh.", k: "clean_sheets", f: 2 }
+  };
+  var BY_POS = {
+    F: ["xg", "goals", "shots", "xa", "kp", "rec"],
+    M: ["xa", "kp", "xg", "goals", "tackles", "rec"],
+    D: ["tackles", "cbi", "rec", "xa", "xg"],
+    G: ["saves", "gc", "cs"]
+  };
+  var SHRINK = 360;    // minutes of position-average play added to every player's rate
+  var BASE_MIN = 180;  // players need this many minutes to count toward rankings
+  var PAGE = 25;
+
+  var players = [], teamsByLeague = {};
+  var st = { team: "Everton", pos: "F", age: 99, min: 270, own: false, leagues: null, shown: PAGE, cmp: [] };
+  try {
+    var saved = JSON.parse(localStorage.getItem("plp-scout") || "null");
+    if (saved) ["team", "pos", "age", "min", "own"].forEach(function (k) { if (saved[k] != null) st[k] = saved[k]; });
+  } catch (e) {}
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  function load(d) {
+    DATA = d;
+    players = d.rows.map(function (r, i) {
+      var p = { id: i };
+      d.fields.forEach(function (f, j) { p[f] = r[j]; });
+      return p;
+    });
+    teamsByLeague = {};
+    players.forEach(function (p) { (teamsByLeague[p.league] = teamsByLeague[p.league] || {})[p.team] = 1; });
+    var have = leaguesPresent();
+    st.leagues = have.slice();
+    if (!teamOf(st.team)) st.team = teamOf("Everton") ? "Everton" : Object.keys(teamsByLeague[have[0]])[0];
+    buildControls();
+    st.cmp = [];
+    render(true);
+  }
+  function leaguesPresent() {
+    return LEAGUE_ORDER.filter(function (l) { return teamsByLeague[l]; })
+      .concat(Object.keys(teamsByLeague).filter(function (l) { return LEAGUE_ORDER.indexOf(l) < 0; }));
+  }
+  function teamOf(name) {
+    for (var l in teamsByLeague) if (teamsByLeague[l][name]) return l;
+    return null;
+  }
+
+  function buildControls() {
+    var sel = $("scTeam");
+    sel.innerHTML = "";
+    leaguesPresent().forEach(function (l) {
+      var g = document.createElement("optgroup"); g.label = l;
+      Object.keys(teamsByLeague[l]).sort().forEach(function (t) { g.appendChild(new Option(t, t)); });
+      sel.appendChild(g);
+    });
+    sel.value = st.team;
+    $("scAge").value = String(st.age);
+    $("scMin").value = String(st.min);
+    $("scOwn").checked = !!st.own;
+    Array.prototype.forEach.call($("scPos").children, function (b) { b.setAttribute("aria-pressed", b.dataset.pos === st.pos ? "true" : "false"); });
+
+    var chips = $("scLeagues"), have = leaguesPresent(), meta = DATA.leagues || {};
+    chips.innerHTML = have.map(function (l, i) {
+      return "<label class='chip'><input type='checkbox' id='lg" + i + "' data-league='" + esc(l) + "'" +
+        (st.leagues.indexOf(l) >= 0 ? " checked" : "") + "> " + esc(l) + "</label>";
+    }).join("") + LEAGUE_ORDER.filter(function (l) { return have.indexOf(l) < 0; }).map(function (l) {
+      return "<span class='chip off' title='Not in the data yet'>" + esc(l) + "</span>";
+    }).join("");
+    Array.prototype.forEach.call(chips.querySelectorAll("input"), function (box) {
+      box.addEventListener("change", function () {
+        var on = Array.prototype.filter.call(chips.querySelectorAll("input"), function (b) { return b.checked; })
+          .map(function (b) { return b.dataset.league; });
+        if (!on.length) { box.checked = true; return; }
+        st.leagues = on; st.shown = PAGE; render(false);
+      });
+    });
+
+    var parts = have.map(function (l) {
+      var m = meta[l] || {};
+      return l + (m.matches ? " · " + m.matches + " matches" : "") + (m.status === "stale" ? " (stale)" : "");
+    });
+    var missing = LEAGUE_ORDER.filter(function (l) { return have.indexOf(l) < 0; });
+    $("scData").textContent = parts.join(" · ") + (DATA.generated ? " · updated " + fmtDate(DATA.generated) : "") +
+      (missing.length ? ". Not loaded yet: " + missing.join(", ") + "." : "");
+  }
+  function fmtDate(s) {
+    var d = new Date(s);
+    return isNaN(d) ? s : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  // ---------- model
+  function rate(p, k) { return p[k] == null ? null : p[k] / p.minutes * 90; }
+
+  function model() {
+    var pos = st.pos, keys = BY_POS[pos];
+    var pool = players.filter(function (p) { return p.pos === pos && st.leagues.indexOf(p.league) >= 0; });
+    var base = pool.filter(function (p) { return p.minutes >= BASE_MIN; });
+    var mets = keys.map(function (key) {
+      var m = MET[key], have = base.filter(function (p) { return p[m.k] != null; });
+      if (have.length < 10) return null;
+      var sumS = 0, sumM = 0;
+      have.forEach(function (p) { sumS += p[m.k]; sumM += p.minutes; });
+      var prior = sumS / sumM;
+      var shr = function (p) { return p[m.k] == null ? null : (p[m.k] + prior * SHRINK) / (p.minutes + SHRINK) * 90; };
+      var sorted = have.map(shr).sort(function (a, b) { return a - b; });
+      var pct = function (v) {
+        if (v == null) return null;
+        var lo = 0, hi = sorted.length;
+        while (lo < hi) { var mid = (lo + hi) >> 1; if (sorted[mid] < v) lo = mid + 1; else hi = mid; }
+        var below = lo, eq = 0;
+        while (lo + eq < sorted.length && sorted[lo + eq] === v) eq++;
+        var r = (below + eq / 2) / sorted.length;
+        return m.low ? 1 - r : r;
+      };
+      // the team's current output at this position
+      var mine = players.filter(function (p) { return p.team === st.team && p.pos === pos && p[m.k] != null; });
+      var ts = 0, tm = 0;
+      mine.forEach(function (p) { ts += p[m.k]; tm += p.minutes; });
+      var teamRate = tm ? ts / tm * 90 : null;
+      var teamPct = teamRate == null ? null : pct(teamRate);
+      var w = teamPct == null ? 0.5 : 0.25 + Math.max(0, 0.6 - teamPct) * 2;
+      return { key: key, m: m, shr: shr, pct: pct, teamRate: teamRate, teamPct: teamPct, teamMin: tm, w: w, n: have.length };
+    }).filter(Boolean);
+
+    var noAge = 0;
+    var cands = pool.filter(function (p) {
+      if (p.minutes < st.min) return false;
+      if (!st.own && p.team === st.team) return false;
+      if (st.age < 99) {
+        if (p.age == null) { noAge++; return false; }
+        if (p.age > st.age) return false;
+      }
+      return true;
+    }).map(function (p) {
+      var sw = 0, s = 0, pcts = {};
+      mets.forEach(function (x) {
+        var v = x.pct(x.shr(p));
+        pcts[x.key] = v;
+        if (v != null) { s += x.w * v; sw += x.w; }
+      });
+      return { p: p, pcts: pcts, fit: sw ? s / sw * 100 : 0, cover: sw };
+    }).sort(function (a, b) { return b.fit - a.fit || b.p.minutes - a.p.minutes; });
+    return { mets: mets, cands: cands, pool: base.length, noAge: noAge };
+  }
+
+  // ---------- render
+  function render(resetCmp) {
+    var M = model(), pos = st.pos;
+    $("scOwnTxt").textContent = "Include " + st.team + " players";
+    try { localStorage.setItem("plp-scout", JSON.stringify({ team: st.team, pos: st.pos, age: st.age, min: st.min, own: st.own })); } catch (e) {}
+
+    // needs
+    var ranked = M.mets.filter(function (x) { return x.teamPct != null; }).slice().sort(function (a, b) { return a.teamPct - b.teamPct; });
+    var gaps = ranked.filter(function (x) { return x.teamPct < 0.4; }).slice(0, 2).map(function (x) { return x.key; });
+    $("needsTitle").textContent = "What " + st.team + " need from their " + POS_PLURAL[pos];
+    var teamMin = M.mets.reduce(function (a, x) { return Math.max(a, x.teamMin); }, 0);
+    $("needsNote").textContent = "Per 90 minutes, from " + teamMin.toLocaleString() + " minutes played by " + st.team +
+      " " + POS_PLURAL[pos] + ", ranked against " + M.pool + " " + POS_PLURAL[pos] + " with " + BASE_MIN + "+ minutes. The middle line is the typical player.";
+    var order = ranked.concat(M.mets.filter(function (x) { return x.teamPct == null; }));
+    $("needList").innerHTML = order.length ? order.map(function (x) {
+      var has = x.teamPct != null, p = has ? Math.round(x.teamPct * 100) : 0, gap = gaps.indexOf(x.key) >= 0;
+      return "<li class='need" + (gap ? " gap" : "") + "'><span class='need-name'>" + esc(x.m.t) + (gap ? "<span class='tag'>Need</span>" : "") + "</span>" +
+        "<span class='need-val'>" + (has ? x.teamRate.toFixed(x.m.f) + " per 90" : "no data") + "</span>" +
+        "<span class='need-track'><span class='need-fill' style='width:" + p + "%'></span><span class='need-mid'></span></span>" +
+        "<span class='need-sub'>" + (has ? rankWords(x.teamPct, x.m.low) : "No " + esc(x.m.t.toLowerCase()) + " data for this team") + "</span></li>";
+    }).join("") : "<li class='empty'>Not enough players at this position to compare.</li>";
+
+    // results
+    var cols = M.mets.slice().sort(function (a, b) { return b.w - a.w; }).slice(0, 3);
+    $("resTitle").textContent = "Best-fit " + POS_PLURAL[pos] + " for " + st.team;
+    var notes = [M.cands.length + " " + (M.cands.length === 1 ? POS_NAME[pos] : POS_PLURAL[pos]) + " match your filters"];
+    if (M.noAge) notes.push(M.noAge + " without a known age are hidden by the age filter");
+    $("resNote").textContent = notes.join(". ") + ". Columns show the stats " + st.team + " need most, per 90.";
+
+    if (resetCmp) st.cmp = M.cands.slice(0, 2).map(function (c) { return c.p.id; });
+    var rows = M.cands.slice(0, st.shown);
+    var head = "<thead><tr><th class='l'>#</th><th class='l'>Player</th><th>Fit</th>" +
+      cols.map(function (x) { return "<th title='" + esc(x.m.t) + " per 90'>" + esc(x.m.s || x.m.t) + "</th>"; }).join("") +
+      "<th>Min</th><th>Compare</th></tr></thead>";
+    var full = st.cmp.length >= 3;
+    var body = rows.map(function (c, i) {
+      var p = c.p, on = st.cmp.indexOf(p.id) >= 0;
+      return "<tr><td class='l rank'>" + (i + 1) + "</td><td class='l'><span class='pl-name'>" + esc(p.name) + "</span>" +
+        "<span class='pl-meta'>" + esc(p.team) + " · " + esc(p.league) + (p.age != null ? " · " + p.age : "") + "</span></td>" +
+        "<td><span class='fit'><b>" + Math.round(c.fit) + "</b><span><i style='width:" + c.fit.toFixed(1) + "%'></i></span></span></td>" +
+        cols.map(function (x) {
+          var r = rate(p, x.m.k), pc = c.pcts[x.key];
+          return "<td>" + (r == null ? "–" : "<span class='p90'>" + r.toFixed(x.m.f) + "</span><span class='pct'>" + ordinal(pc) + "</span>") + "</td>";
+        }).join("") +
+        "<td>" + p.minutes + "</td><td><button type='button' class='cmp-box' data-id='" + p.id + "' aria-pressed='" + on + "'" +
+        (full && !on ? " disabled" : "") + " aria-label='Compare " + esc(p.name) + "'></button></td></tr>";
+    }).join("");
+    $("resTable").innerHTML = rows.length ? head + "<tbody>" + body + "</tbody>" :
+      "<tbody><tr><td class='empty l'>No " + POS_PLURAL[pos] + " match these filters. Try a lower minutes threshold or a higher age limit.</td></tr></tbody>";
+    $("resMore").hidden = M.cands.length <= st.shown;
+    Array.prototype.forEach.call($("resTable").querySelectorAll(".cmp-box"), function (b) {
+      b.addEventListener("click", function () {
+        var id = +b.dataset.id, i = st.cmp.indexOf(id);
+        if (i >= 0) st.cmp.splice(i, 1); else if (st.cmp.length < 3) st.cmp.push(id);
+        render(false);
+      });
+    });
+
+    renderCompare(M);
+  }
+
+  function renderCompare(M) {
+    var byId = {};
+    M.cands.forEach(function (c) { byId[c.p.id] = c; });
+    st.cmp = st.cmp.filter(function (id) { return byId[id]; });
+    var sel = st.cmp.map(function (id) { return byId[id]; });
+    if (!sel.length) { $("cmpWrap").innerHTML = "<p class='empty'>No players ticked.</p>"; return; }
+    var pos = st.pos;
+    var h = "<table class='cmp'><thead><tr><th></th>" + sel.map(function (c) {
+      return "<th><span class='pl-name'>" + esc(c.p.name) + "</span><span class='pl-meta'>" + esc(c.p.team) + "</span></th>";
+    }).join("") + "<th class='now'>" + esc(st.team) + " now<span class='pl-meta'>all " + POS_PLURAL[pos] + "</span></th></tr></thead><tbody>";
+    function row(label, vals, now, bestIdx) {
+      return "<tr><td>" + label + "</td>" + vals.map(function (v, i) {
+        return "<td" + (i === bestIdx ? " class='best'" : "") + ">" + v + "</td>";
+      }).join("") + "<td class='now'>" + now + "</td></tr>";
+    }
+    function best(arr, low) {
+      var bi = -1, bv = null;
+      arr.forEach(function (v, i) { if (v != null && (bv == null || (low ? v < bv : v > bv))) { bv = v; bi = i; } });
+      return sel.length > 1 ? bi : -1;
+    }
+    var fits = sel.map(function (c) { return c.fit; });
+    h += row("Fit score", fits.map(function (f) { return Math.round(f); }), "", best(fits));
+    h += "<tr class='sect'><td colspan='" + (sel.length + 2) + "'>Per 90 minutes</td></tr>";
+    M.mets.forEach(function (x) {
+      var pcs = sel.map(function (c) { return c.pcts[x.key]; });
+      h += row(esc(x.m.t), sel.map(function (c) {
+        var r = rate(c.p, x.m.k);
+        return r == null ? "–" : r.toFixed(x.m.f) + " <span class='pct' style='display:inline'>" + ordinal(c.pcts[x.key]) + "</span>";
+      }), x.teamRate == null ? "–" : x.teamRate.toFixed(x.m.f), best(pcs));
+    });
+    h += "<tr class='sect'><td colspan='" + (sel.length + 2) + "'>Season so far</td></tr>";
+    [["Age", "age"], ["Matches", "apps"], ["Minutes", "minutes"], ["Goals", "goals"], ["Assists", "assists"]].forEach(function (r) {
+      h += row(r[0], sel.map(function (c) { return c.p[r[1]] == null ? "–" : c.p[r[1]]; }), "", -1);
+    });
+    $("cmpWrap").innerHTML = h + "</tbody></table>";
+  }
+
+  function ordinal(p) {
+    if (p == null) return "";
+    var n = Math.max(1, Math.min(99, Math.round(p * 100)));
+    var s = (n % 100 >= 11 && n % 100 <= 13) ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th");
+    return n + s;
+  }
+  function rankWords(p) {
+    var n = Math.round(p * 100);
+    if (n <= 50) return "Bottom " + Math.max(1, n) + "% at the position";
+    return "Top " + Math.max(1, 100 - n) + "% at the position";
+  }
+
+  // ---------- events
+  $("scTeam").addEventListener("change", function () { st.team = this.value; st.shown = PAGE; render(true); });
+  Array.prototype.forEach.call($("scPos").children, function (b) {
+    b.addEventListener("click", function () {
+      st.pos = b.dataset.pos; st.shown = PAGE;
+      Array.prototype.forEach.call($("scPos").children, function (o) { o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+      render(true);
+    });
+  });
+  $("scAge").addEventListener("change", function () { st.age = +this.value; st.shown = PAGE; render(false); });
+  $("scMin").addEventListener("change", function () { st.min = +this.value; st.shown = PAGE; render(false); });
+  $("scOwn").addEventListener("change", function () { st.own = this.checked; st.shown = PAGE; render(false); });
+  $("resMore").addEventListener("click", function () { st.shown += PAGE; render(false); });
+
+  load(DATA);
+
+  // On GitHub Pages, use the file the weekly refresh writes.
+  if (location.protocol.indexOf("http") === 0 && window.fetch) {
+    fetch("data/players.json", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.rows && d.rows.length && d.generated !== DATA.generated) load(d); })
+      .catch(function () {});
+  }
+})();
+</script>
 </body>
 </html>
