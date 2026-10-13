@@ -118,7 +118,33 @@ class Checks(unittest.TestCase):
             rd.check_league(now, "La Liga", 20, before)
 
 
+    def test_small_minute_corrections_pass(self):
+        now = self.rows()
+        before = [dict(r, minutes=r["minutes"] + 2) for r in now]
+        rd.check_league(now, "La Liga", 20, before)
+
+    def test_comparison_can_be_skipped(self):
+        now = self.rows()
+        before = [dict(r, minutes=r["minutes"] + 90) for r in now]
+        rd.check_league(now, "La Liga", 20, before, compare_minutes=False)
+
+
 class Build(unittest.TestCase):
+    def test_source_change_skips_minutes_check(self):
+        sizes = {"EPL": 20, "La_liga": 20, "Bundesliga": 18, "Serie_A": 20, "Ligue_1": 18}
+
+        def get(url, headers=None):
+            if "githubusercontent" in url:
+                raise rd.LeagueError("offline")
+            return json.dumps({"players": league(sizes[url.split("/")[-2]])})
+
+        # last run's Premier League rows came from FPL and had more minutes for every player
+        previous = [{"name": r["name"], "team": r["team"], "league": "Premier League", "minutes": 900}
+                    for r in rd.understat_rows(league(20), "Premier League")]
+        rows, meta, problems = rd.build(2026, previous, {"Premier League": {"source": "fpl"}}, get)
+        self.assertEqual(meta["Premier League"]["status"], "ok")
+        self.assertEqual(problems, [])
+
     def test_failed_league_keeps_previous_rows(self):
         sizes = {"EPL": 20, "La_liga": 20, "Bundesliga": 18, "Serie_A": 20, "Ligue_1": 18}
 
