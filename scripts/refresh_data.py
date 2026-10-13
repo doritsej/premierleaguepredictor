@@ -74,6 +74,7 @@ UA = "Mozilla/5.0 (compatible; premier-league-predictor data refresh)"
 # Checks
 MIN_PLAYERS = 150            # players with minutes in a league
 MAX_MINUTES_DROP_SHARE = 0.05  # share of returning players whose minutes went down
+MINUTES_TOLERANCE = 5          # smaller drops are treated as corrections, not resets
 
 
 class LeagueError(Exception):
@@ -309,7 +310,8 @@ def merge_fpl(us_rows: list[dict], fpl_rows: list[dict]) -> tuple[list[dict], in
 
 # ---------------------------------------------------------------- checks
 
-def check_league(rows: list[dict], league: str, n_teams: int, previous: list[dict]) -> None:
+def check_league(rows: list[dict], league: str, n_teams: int, previous: list[dict],
+                 compare_minutes: bool = True) -> None:
     if len(rows) < MIN_PLAYERS:
         raise LeagueError(f"only {len(rows)} players with minutes (expected at least {MIN_PLAYERS})")
     teams = {r["team"] for r in rows}
@@ -321,9 +323,12 @@ def check_league(rows: list[dict], league: str, n_teams: int, previous: list[dic
                 raise LeagueError(f"negative {k} for {r['name']}")
         if r["apps"] and r["minutes"] > r["apps"] * 125:
             raise LeagueError(f"{r['name']} has {r['minutes']} minutes in {r['apps']} matches")
+    if not compare_minutes:
+        return
     old = {(p["name"], p["team"]): p["minutes"] for p in previous if p["league"] == league}
     shared = [(r, old[(r["name"], r["team"])]) for r in rows if (r["name"], r["team"]) in old]
-    drops = [r["name"] for r, m in shared if r["minutes"] < m]
+    # sources sometimes correct a match by a minute or two, so only bigger drops count
+    drops = [r["name"] for r, m in shared if r["minutes"] < m - MINUTES_TOLERANCE]
     if shared and len(drops) / len(shared) > MAX_MINUTES_DROP_SHARE:
         raise LeagueError(f"minutes went down for {len(drops)} of {len(shared)} players since the last run "
                           f"(e.g. {', '.join(drops[:3])}); the source may have reset or changed")
@@ -369,7 +374,12 @@ def build(season: int, previous: list[dict], prev_meta: dict, get=http_get) -> t
             for r in lr:
                 for k in [k for k in r if k.startswith("_")]:
                     del r[k]
-            check_league(lr, league, n_teams, previous)
+            prev_source = prev_meta.get(league, {}).get("source")
+            same_source = prev_source in (None, source)
+            if not same_source:
+                print(f"  source changed ({prev_source} -> {source}); skipping the minutes comparison this run",
+                      file=sys.stderr)
+            check_league(lr, league, n_teams, previous, compare_minutes=same_source)
             rows += lr
             meta[league] = {"status": "ok", "source": source, "updated": today, "players": len(lr),
                             "matches": max((r["apps"] or 0) for r in lr)}
