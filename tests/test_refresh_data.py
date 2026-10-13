@@ -129,6 +129,91 @@ class Checks(unittest.TestCase):
         rd.check_league(now, "La Liga", 20, before, compare_minutes=False)
 
 
+def tm(pid, name, dob, comp, club, last_season=2025, first=None, last=None):
+    parts = name.split()
+    return {"id": str(pid), "name": name, "first": first if first is not None else " ".join(parts[:-1]),
+            "last": last if last is not None else parts[-1], "dob": dob, "last_season": last_season,
+            "comp": comp, "club": club}
+
+
+class Ages(unittest.TestCase):
+    TODAY = rd.dt.date(2026, 10, 13)
+
+    def row(self, name, team, league, age=None):
+        return {"name": name, "team": team, "league": league, "age": age}
+
+    def test_fills_missing_age_ignoring_accents(self):
+        rows = [self.row("Kylian Mbappe", "Real Madrid", "La Liga")]
+        rd.add_ages(rows, [tm(1, "Kylian Mbappé", "1998-12-20", "ES1", "Real Madrid Club de Fútbol")], 2026, self.TODAY)
+        self.assertEqual(rows[0]["age"], 27)
+
+    def test_keeps_existing_age(self):
+        rows = [self.row("Bukayo Saka", "Arsenal", "Premier League", age=25)]
+        rd.add_ages(rows, [tm(1, "Bukayo Saka", "1990-01-01", "GB1", "Arsenal FC")], 2026, self.TODAY)
+        self.assertEqual(rows[0]["age"], 25)
+
+    def test_same_name_resolved_by_league(self):
+        rows = [self.row("Rodri Hernandez", "Real Betis", "La Liga")]
+        cands = [tm(1, "Rodri Hernandez", "1996-06-22", "GB1", "Manchester City"),
+                 tm(2, "Rodri Hernandez", "2000-03-16", "ES1", "Real Betis Balompié")]
+        rd.add_ages(rows, cands, 2026, self.TODAY)
+        self.assertEqual(rows[0]["age"], 26)
+
+    def test_same_name_resolved_by_club(self):
+        rows = [self.row("Jonathan David", "Juventus", "Serie A")]
+        cands = [tm(1, "Jonathan David", "2000-01-14", "IT1", "Juventus Football Club"),
+                 tm(2, "Jonathan David", "1995-05-05", "IT1", "US Lecce")]
+        rd.add_ages(rows, cands, 2026, self.TODAY)
+        self.assertEqual(rows[0]["age"], 26)
+
+    def test_summer_transfer_still_matches(self):
+        # the dataset still lists his old club in another league
+        rows = [self.row("Florian Wirtz", "Liverpool", "Premier League")]
+        rd.add_ages(rows, [tm(1, "Florian Wirtz", "2003-05-03", "L1", "Bayer 04 Leverkusen")], 2026, self.TODAY)
+        self.assertEqual(rows[0]["age"], 23)
+
+    def test_ambiguous_names_are_left_blank(self):
+        rows = [self.row("Danilo", "Napoli", "Serie A")]
+        cands = [tm(1, "Danilo", "1991-07-15", "BRA1", "Flamengo", first=""),
+                 tm(2, "Danilo", "2001-04-29", "NL1", "Feyenoord", first="")]
+        rd.add_ages(rows, cands, 2026, self.TODAY)
+        self.assertIsNone(rows[0]["age"])
+
+    def test_retired_namesake_ignored(self):
+        rows = [self.row("Paulo Dybala", "Roma", "Serie A")]
+        rd.add_ages(rows, [tm(1, "Paulo Dybala", "1950-01-01", "IT1", "AS Roma", last_season=1985)], 2026, self.TODAY)
+        self.assertIsNone(rows[0]["age"])
+
+    def test_surname_and_initial_fallback(self):
+        rows = [self.row("Vini Junior", "Real Madrid", "La Liga")]
+        rd.add_ages(rows, [tm(1, "Vinicius Junior", "2000-07-12", "ES1", "Real Madrid Club de Fútbol")], 2026, self.TODAY)
+        self.assertEqual(rows[0]["age"], 26)
+
+    def test_reads_transfermarkt_csv(self):
+        import gzip
+        csv_text = ("player_id,first_name,last_name,name,last_season,date_of_birth,"
+                    "current_club_domestic_competition_id,current_club_name\n"
+                    "1,Kylian,Mbappé,Kylian Mbappé,2025,1998-12-20 00:00:00,ES1,Real Madrid\n"
+                    "2,No,Date,No Date,2025,,ES1,Somewhere\n")
+        body = rd.decode_body(gzip.compress(csv_text.encode()))
+        players = rd.fetch_transfermarkt(lambda url, headers=None: body)
+        self.assertEqual(len(players), 1)
+        self.assertEqual(players[0]["dob"], "1998-12-20")
+
+
+class NewSeason(unittest.TestCase):
+    def test_last_seasons_file_is_ignored(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "players.json"
+            p.write_text(json.dumps({"season": "2026-27", "leagues": {"La Liga": {"source": "understat"}},
+                                     "fields": ["name", "team", "league", "minutes"],
+                                     "rows": [["A", "B", "La Liga", 3000]]}))
+            self.assertEqual(rd.load_previous(p, 2027), ([], {}))
+            rows, meta = rd.load_previous(p, 2026)
+            self.assertEqual(rows[0]["minutes"], 3000)
+
+
 class Build(unittest.TestCase):
     def test_source_change_skips_minutes_check(self):
         sizes = {"EPL": 20, "La_liga": 20, "Bundesliga": 18, "Serie_A": 20, "Ligue_1": 18}
