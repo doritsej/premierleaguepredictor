@@ -42,6 +42,20 @@ class ParseUnderstat(unittest.TestCase):
         p = rd.fetch_understat("La_liga", 2026, get)
         self.assertEqual(p[0]["player_name"], "Kylian Mbappé")
 
+    def test_gzip_and_deflate_bodies(self):
+        import gzip
+        import zlib
+        text = '{"players": [], "name": "Mbappé"}'
+        self.assertEqual(rd.decode_body(gzip.compress(text.encode())), text)          # no header
+        self.assertEqual(rd.decode_body(gzip.compress(text.encode()), "gzip"), text)
+        self.assertEqual(rd.decode_body(zlib.compress(text.encode()), "deflate"), text)
+        self.assertEqual(rd.decode_body(text.encode()), text)                          # plain
+
+    def test_players_keyed_by_id(self):
+        body = json.dumps({"players": {"1": us_player(1, "A B", "Lens")}})
+        p = rd.fetch_understat("Ligue_1", 2026, lambda url, headers=None: body)
+        self.assertEqual(p[0]["player_name"], "A B")
+
     def test_mid_season_move_uses_current_club(self):
         r = rd.understat_rows([us_player(1, "A B", "Fulham,Everton")], "Premier League")[0]
         self.assertEqual(r["team"], "Everton")
