@@ -95,6 +95,59 @@ class Clubs(unittest.TestCase):
         rows = rd.understat_rows(players, "Ligue 1")
         self.assertEqual(sum(1 for r in rows if r["team"] == "Paris Saint Germain"), 10)
 
+    def test_match_history_wins(self):
+        # Beraldo-style case: unknown to Transfermarkt, but his matches show his club
+        both = "Paris Saint Germain,Rennes"
+        players = ([us_player(i, f"P{i}", both) for i in range(5)] +
+                   [us_player(100 + i, f"R{i}", "Rennes") for i in range(20)])
+        history = lambda row, clubs: "Paris Saint Germain"
+        rows = rd.understat_rows(players, "Ligue 1", None, history)
+        self.assertTrue(all(r["team"] == "Paris Saint Germain" for r in rows if r["name"].startswith("P")))
+
+    def test_history_failure_falls_back(self):
+        def broken(row, clubs):
+            raise rd.LeagueError("blocked")
+        rows = rd.understat_rows([us_player(1, "A B", "Fulham,Everton")], "Premier League", None, broken)
+        self.assertEqual(rows[0]["team"], "Everton")
+
+    def test_club_from_matches(self):
+        clubs = ("Paris Saint Germain", "Rennes")
+        matches = [
+            {"date": "2026-10-04 19:00:00", "season": "2026", "h_team": "Rennes", "a_team": "Paris Saint Germain"},
+            {"date": "2026-09-27 19:00:00", "season": "2026", "h_team": "Paris Saint Germain", "a_team": "Lyon"},
+            {"date": "2026-09-20 19:00:00", "season": "2026", "h_team": "Monaco", "a_team": "Paris Saint Germain"},
+            {"date": "2026-05-01 19:00:00", "season": "2025", "h_team": "Rennes", "a_team": "Lens"},
+        ]
+        # the latest match involves both clubs, so the one before decides
+        self.assertEqual(rd.club_from_matches(matches, clubs, 2026), "Paris Saint Germain")
+        # a real transfer: latest match only involves the new club
+        transfer = [{"date": "2026-10-04", "season": "2026", "h_team": "Torino", "a_team": "Genoa"},
+                    {"date": "2026-08-24", "season": "2026", "h_team": "Fiorentina", "a_team": "Napoli"}]
+        self.assertEqual(rd.club_from_matches(transfer, ("Fiorentina", "Torino"), 2026), "Torino")
+        self.assertIsNone(rd.club_from_matches([], clubs, 2026))
+
+    def test_fetch_player_matches_both_formats(self):
+        m = [{"date": "2026-10-04", "season": "2026", "h_team": "Lyon", "a_team": "Nice"}]
+        self.assertEqual(rd.fetch_player_matches("7", lambda url, headers=None: json.dumps({"matches": m})), m)
+        escaped = "".join("\\x%02X" % ord(c) if c in "\"[]{}:," else c for c in json.dumps(m))
+        page = f"<script>var matchesData = JSON.parse('{escaped}');</script>"
+
+        def get(url, headers=None):
+            if "getPlayerData" in url:
+                raise rd.LeagueError("404")
+            return page
+        self.assertEqual(rd.fetch_player_matches("7", get), m)
+
+    def test_fpl_club_overrides_understat(self):
+        rows = rd.understat_rows([us_player(1, "Jamie Gittens", "Everton,Man City")], "Premier League",
+                                 None, lambda row, clubs: None)
+        rows[0]["team"] = "Man City"  # suppose Understat's guess was wrong
+        fpl = [{"name": "Jamie Gittens", "team": "Everton", "pos": "M", "_first": "Jamie", "_second": "Gittens",
+                "_web": "Gittens", "age": 22, "starts": 4, "tackles": 3, "cbi": 1, "recoveries": 9, "saves": 0,
+                "clean_sheets": 1, "goals_conceded": 6}]
+        rows, matched = rd.merge_fpl(rows, fpl)
+        self.assertEqual((matched, rows[0]["team"]), (1, "Everton"))
+
     def test_same_club_names(self):
         self.assertTrue(rd.same_club("Stade Rennais Football Club", "Rennes"))
         self.assertTrue(rd.same_club("Paris Saint-Germain Football Club", "Paris Saint Germain"))
