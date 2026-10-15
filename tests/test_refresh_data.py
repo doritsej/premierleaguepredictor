@@ -69,15 +69,36 @@ class ParseUnderstat(unittest.TestCase):
 
 
 class Clubs(unittest.TestCase):
-    def test_recording_error_goes_to_the_thinner_squad(self):
-        # 15 PSG players also credited to Rennes, which has its own 20 players
-        players = ([us_player(i, f"PSG {i}", "Paris Saint Germain,Rennes") for i in range(15)] +
-                   [us_player(100 + i, f"PSG solo {i}", "Paris Saint Germain") for i in range(6)] +
-                   [us_player(200 + i, f"Rennes {i}", "Rennes") for i in range(20)])
-        rows = rd.understat_rows(players, "Ligue 1")
+    def test_recording_error_split_by_transfermarkt_club(self):
+        # one match credited to both clubs: 17 PSG and 14 Rennes players all listed at both
+        both = "Paris Saint Germain,Rennes"
+        players = ([us_player(i, f"Psg Player{i}", both) for i in range(17)] +
+                   [us_player(100 + i, f"Rennes Player{i}", both) for i in range(14)] +
+                   [us_player(200 + i, f"Psg Solo{i}", "Paris Saint Germain") for i in range(4)] +
+                   [us_player(300 + i, f"Rennes Solo{i}", "Rennes") for i in range(6)] +
+                   [us_player(400, "New Signing", both)])                 # not in Transfermarkt
+        tmp = ([tm(i, f"Psg Player{i}", "2000-01-01", "FR1", "Paris Saint-Germain Football Club") for i in range(17)] +
+               [tm(100 + i, f"Rennes Player{i}", "2000-01-01", "FR1", "Stade Rennais Football Club") for i in range(14)])
+        rows = rd.understat_rows(players, "Ligue 1", rd.TMIndex(tmp, 2026))
         teams = {r["name"]: r["team"] for r in rows}
-        self.assertEqual(teams["PSG 3"], "Paris Saint Germain")
-        self.assertEqual(teams["Rennes 3"], "Rennes")
+        self.assertEqual(teams["Psg Player3"], "Paris Saint Germain")
+        self.assertEqual(teams["Rennes Player3"], "Rennes")
+        squads = {}
+        for r in rows:
+            squads[r["team"]] = squads.get(r["team"], 0) + 1
+        self.assertEqual(squads, {"Paris Saint Germain": 21, "Rennes": 21})  # signing went to the smaller squad
+
+    def test_recording_error_without_transfermarkt_balances_squads(self):
+        both = "Paris Saint Germain,Rennes"
+        players = ([us_player(i, f"P{i}", both) for i in range(10)] +
+                   [us_player(100 + i, f"R{i}", "Rennes") for i in range(15)])
+        rows = rd.understat_rows(players, "Ligue 1")
+        self.assertEqual(sum(1 for r in rows if r["team"] == "Paris Saint Germain"), 10)
+
+    def test_same_club_names(self):
+        self.assertTrue(rd.same_club("Stade Rennais Football Club", "Rennes"))
+        self.assertTrue(rd.same_club("Paris Saint-Germain Football Club", "Paris Saint Germain"))
+        self.assertFalse(rd.same_club("Stade Rennais Football Club", "Paris Saint Germain"))
 
     def test_single_transfer_uses_last_club(self):
         rows = rd.understat_rows([us_player(1, "A B", "Fulham,Everton")] +
