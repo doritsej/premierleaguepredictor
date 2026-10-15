@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Refresh player data for the Scouting tab.
+"""Refresh the data behind the site.
 
-Pulls this season's player stats for the top five European leagues and writes
-data/players.json, which the site reads.
+Writes two files the site reads:
+  * data/players.json - this season's player stats for the top five European
+    leagues (Scouting tab, and goalscorer odds in the Match predictor).
+  * data/teams.json - Premier League results for the last five completed
+    seasons plus this season so far (Match predictor team ratings).
 
 Sources
   * Understat (understat.com): minutes, goals, assists, xG, xA, npxG, shots and
@@ -19,8 +22,8 @@ failed and GitHub emails you. Leagues that passed are still written.
 Only the Python standard library is used.
 
 Usage
-  python scripts/refresh_data.py                  # writes data/players.json
-  python scripts/refresh_data.py --out other.json
+  python scripts/refresh_data.py                  # writes data/players.json and data/teams.json
+  python scripts/refresh_data.py --out other.json --teams-out other-teams.json
   python scripts/refresh_data.py --season 2026    # season start year
 """
 from __future__ import annotations
@@ -36,6 +39,7 @@ import re
 import sys
 import time
 import unicodedata
+import urllib.error
 import urllib.request
 import zlib
 from pathlib import Path
@@ -63,7 +67,8 @@ TEAM_NAMES = {
     "Wolverhampton Wanderers": "Wolves", "West Ham United": "West Ham",
     "Brighton & Hove Albion": "Brighton", "Leeds United": "Leeds", "Leicester City": "Leicester",
     "Ipswich Town": "Ipswich", "Ipswich": "Ipswich", "Coventry City": "Coventry",
-    "Hull City": "Hull", "Sheffield United": "Sheffield United", "Luton Town": "Luton",
+    "Hull City": "Hull", "Sheffield United": "Sheffield United", "Sheffield Utd": "Sheffield United",
+    "Luton Town": "Luton", "Leicester": "Leicester", "Norwich City": "Norwich", "Watford FC": "Watford",
     "AFC Bournemouth": "Bournemouth",
 }
 
@@ -82,6 +87,8 @@ UA = "Mozilla/5.0 (compatible; premier-league-predictor data refresh)"
 MIN_PLAYERS = 150            # players with minutes in a league
 MAX_MINUTES_DROP_SHARE = 0.05  # share of returning players whose minutes went down
 MINUTES_TOLERANCE = 5          # smaller drops are treated as corrections, not resets
+SQUAD_RANGE = (11, 34)         # players with minutes per club; outside this, something's wrong
+MULTI_CLUB_GROUP = 3           # this many players sharing the same list of clubs = a recording error
 
 
 LEAGUE_NAMES = [name for name, _ in LEAGUES.values()]
@@ -115,6 +122,11 @@ def http_get(url: str, headers: dict | None = None, retries: int = 3) -> str:
             req = urllib.request.Request(url, headers=h)
             with urllib.request.urlopen(req, timeout=60) as r:
                 return decode_body(r.read(), r.headers.get("Content-Encoding", ""))
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code == 404:  # missing file: retrying won't help
+                break
+            time.sleep(2 * (attempt + 1))
         except Exception as e:  # noqa: BLE001 - report whatever went wrong
             last = e
             time.sleep(2 * (attempt + 1))
@@ -198,11 +210,12 @@ def understat_rows(players: list, league: str) -> list[dict]:
         minutes = num(p.get("time"), int) or 0
         if minutes <= 0:
             continue
-        teams = html.unescape(p.get("team_title", "")).split(",")
+        teams = [team_name(t) for t in html.unescape(p.get("team_title", "")).split(",") if t.strip()]
         pos = (p.get("position") or "").split()
         rows.append({
             "name": html.unescape(p.get("player_name", "")).strip(),
-            "team": team_name(teams[-1]),   # players who moved mid-season: current club
+            "team": teams[-1] if teams else "",  # settled by resolve_clubs() below
+            "_teams": teams,
             "league": league,
             "pos": {"GK": "G", "D": "D", "M": "M", "F": "F"}.get(pos[0] if pos else "", None),
             "age": None,
@@ -219,7 +232,41 @@ def understat_rows(players: list, league: str) -> list[dict]:
             "tackles": None, "cbi": None, "recoveries": None,
             "saves": None, "clean_sheets": None, "goals_conceded": None,
         })
+    resolve_clubs(rows)
     return rows
+
+
+def resolve_clubs(rows: list[dict]) -> list[str]:
+    """Pick one club for players Understat lists with several this season.
+
+    A genuine mid-season transfer involves one or two players. When several players share
+    the same list of clubs, it's a recording error on Understat's side (a match credited to
+    the wrong club), so those players go to whichever listed club has the thinner squad
+    otherwise. Returns notes for the run log.
+    """
+    single: dict[str, int] = {}
+    groups: dict[tuple, int] = {}
+    for r in rows:
+        ts = r["_teams"]
+        if len(ts) == 1:
+            single[ts[0]] = single.get(ts[0], 0) + 1
+        elif len(ts) > 1:
+            groups[tuple(ts)] = groups.get(tuple(ts), 0) + 1
+    notes = []
+    for ts, n in groups.items():
+        if n >= MULTI_CLUB_GROUP:
+            club = min(ts, key=lambda t: single.get(t, 0))
+            notes.append(f"{n} players listed at {' + '.join(ts)}: looks like a recording error, kept at {club}")
+        else:
+            club = ts[-1]
+            notes.append(f"{n} player{'s' if n > 1 else ''} listed at {' + '.join(ts)}: "
+                         f"treated as a transfer to {club} (check this)")
+        for r in rows:
+            if tuple(r["_teams"]) == ts:
+                r["team"] = club
+    for line in notes:
+        print(f"  {line}", file=sys.stderr)
+    return notes
 
 
 # ---------------------------------------------------------------- Fantasy Premier League
@@ -404,6 +451,12 @@ def check_league(rows: list[dict], league: str, n_teams: int, previous: list[dic
     teams = {r["team"] for r in rows}
     if len(teams) != n_teams:
         raise LeagueError(f"{len(teams)} teams, expected {n_teams}")
+    squads: dict[str, int] = {}
+    for r in rows:
+        squads[r["team"]] = squads.get(r["team"], 0) + 1
+    odd = [f"{t} has {n}" for t, n in sorted(squads.items()) if not SQUAD_RANGE[0] <= n <= SQUAD_RANGE[1]]
+    if odd:
+        raise LeagueError(f"squad sizes look wrong ({', '.join(odd)} players); players may be on the wrong club")
     for r in rows:
         for k in ("minutes", "goals", "assists", "xg", "xa", "apps"):
             if r[k] is not None and r[k] < 0:
@@ -419,6 +472,148 @@ def check_league(rows: list[dict], league: str, n_teams: int, previous: list[dic
     if shared and len(drops) / len(shared) > MAX_MINUTES_DROP_SHARE:
         raise LeagueError(f"minutes went down for {len(drops)} of {len(shared)} players since the last run "
                           f"(e.g. {', '.join(drops[:3])}); the source may have reset or changed")
+
+
+# ---------------------------------------------------------------- team results (Match predictor)
+
+WINDOW = 5            # completed seasons in the ratings
+CURRENT_WEIGHT = 2    # this season's matches count this many times
+PRIOR_MATCHES = 38    # promoted teams start with this many matches of the promoted-team average
+CORE_PL_GW = "/By%20Tournament/Premier%20League/GW{gw}/matches.csv"
+
+
+def as_int(v) -> int:
+    return int(float(v))
+
+
+def results_vaastav(year: int, get=http_get) -> tuple[list[tuple], set[str]]:
+    """(home, home goals, away goals, away) for finished matches, plus the season's 20 clubs."""
+    base = FPL_VAASTAV.format(season=season_label(year))
+    teams = {r["id"]: team_name(r["name"]) for r in csv.DictReader(io.StringIO(get(f"{base}/teams.csv")))}
+    out = []
+    for r in csv.DictReader(io.StringIO(get(f"{base}/fixtures.csv"))):
+        if r.get("finished") != "True" or r.get("team_h_score") in (None, ""):
+            continue
+        out.append((teams[r["team_h"]], as_int(r["team_h_score"]), as_int(r["team_a_score"]), teams[r["team_a"]]))
+    return out, set(teams.values())
+
+
+def results_core(year: int, get=http_get) -> tuple[list[tuple], set[str]]:
+    """Same, from the per-gameweek Premier League files (kept up to date during the season)."""
+    base = FPL_CORE.format(season=f"{year}-{year + 1}")
+    teams = {r["code"]: team_name(r["name"]) for r in csv.DictReader(io.StringIO(get(f"{base}/teams.csv")))}
+    found: dict[tuple, tuple] = {}
+    for gw in range(1, 39):
+        try:
+            text = get(base + CORE_PL_GW.format(gw=gw))
+        except LeagueError:
+            continue
+        for r in csv.DictReader(io.StringIO(text)):
+            if r.get("finished") != "True" or r.get("tournament", "prem") != "prem":
+                continue
+            h, a = teams[str(as_int(r["home_team"]))], teams[str(as_int(r["away_team"]))]
+            found[(h, a)] = (h, as_int(r["home_score"]), as_int(r["away_score"]), a)  # each pairing once a season
+    return list(found.values()), set(teams.values())
+
+
+def season_results(year: int, complete: bool, get=http_get) -> tuple[list[tuple], set[str]]:
+    """Use whichever source has more finished matches. Completed seasons try the archive first."""
+    order = (results_vaastav, results_core) if complete else (results_core, results_vaastav)
+    best: tuple[list, set] = ([], set())
+    errors = []
+    for fetch in order:
+        try:
+            res = fetch(year, get)
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"{fetch.__name__}: {e}")
+            continue
+        if len(res[0]) > len(best[0]) or not best[1]:
+            best = res
+        if complete and len(best[0]) == 380:
+            break
+    if not best[1]:
+        raise LeagueError(f"{season_label(year)} results unavailable ({'; '.join(errors)})")
+    return best
+
+
+def tally(results: list[tuple]) -> dict[str, list[int]]:
+    """team -> [matches, wins, draws, losses, goals for, goals against]"""
+    t: dict[str, list[int]] = {}
+    for h, hg, ag, a in results:
+        for team, gf, ga in ((h, hg, ag), (a, ag, hg)):
+            x = t.setdefault(team, [0] * 6)
+            x[0] += 1
+            x[1 if gf > ga else 2 if gf == ga else 3] += 1
+            x[4] += gf
+            x[5] += ga
+    return t
+
+
+def build_teams(season: int, previous: dict | None, get=http_get) -> dict:
+    window = list(range(season - WINDOW, season))
+    per_season: dict[int, dict] = {}
+    clubs: dict[int, set] = {}
+    for y in [window[0] - 1] + window:  # one extra season to spot who was promoted
+        res, teams = season_results(y, True, get)
+        if len(res) != 380 or len(teams) != 20:
+            raise LeagueError(f"{season_label(y)}: {len(res)} of 380 matches, {len(teams)} clubs")
+        per_season[y], clubs[y] = tally(res), teams
+
+    cur_res, cur_clubs = season_results(season, False, get)
+    now = tally(cur_res)
+    if len(cur_clubs) != 20:
+        raise LeagueError(f"{season_label(season)}: {len(cur_clubs)} clubs, expected 20")
+    for team, x in now.items():
+        if team not in cur_clubs or x[0] > 38 or min(x) < 0:
+            raise LeagueError(f"{season_label(season)}: odd results for {team} ({x})")
+    if previous and previous.get("season") == season_label(season):
+        before = sum(t["now"][0] for t in previous["teams"]) // 2
+        if len(cur_res) < before:
+            raise LeagueError(f"{season_label(season)}: {len(cur_res)} matches, fewer than the {before} last run")
+
+    # promoted teams' first season back, averaged
+    promoted = [per_season[y][t] for y in window for t in clubs[y] - clubs[y - 1]]
+    pm = sum(x[0] for x in promoted)
+    prior = {"gf": round(sum(x[4] for x in promoted) / pm, 3), "ga": round(sum(x[5] for x in promoted) / pm, 3),
+             "teams": len(promoted), "matches": PRIOR_MATCHES}
+
+    names = set(cur_clubs).union(*(clubs[y] for y in window))
+    teams = []
+    for name in sorted(names):
+        past = [0] * 6
+        n_seasons = 0
+        for y in window:
+            if name in per_season[y]:
+                n_seasons += 1
+                past = [a + b for a, b in zip(past, per_season[y][name])]
+        teams.append({"name": name, "past": past, "seasons": n_seasons,
+                      "now": now.get(name, [0] * 6), "in_league": name in cur_clubs})
+    return {
+        "season": season_label(season),
+        "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
+        "window": [season_label(y) for y in window],
+        "current_weight": CURRENT_WEIGHT,
+        "promoted": prior,
+        "fields": ["matches", "wins", "draws", "losses", "goals_for", "goals_against"],
+        "matches_this_season": len(cur_res),
+        "teams": teams,
+    }
+
+
+def refresh_teams(season: int, out: Path, get=http_get) -> str | None:
+    """Write data/teams.json. Returns a problem description, or None if all went well."""
+    print("Team results:", file=sys.stderr)
+    previous = json.loads(out.read_text("utf-8")) if out.exists() else None
+    try:
+        doc = build_teams(season, previous, get)
+    except Exception as e:  # noqa: BLE001
+        print(f"  FAILED: {e} (kept the last good file)", file=sys.stderr)
+        return f"Team results: {e}"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), "utf-8")
+    print(f"  ok: {doc['matches_this_season']} matches this season, {len(doc['teams'])} teams "
+          f"({doc['window'][0]} to {doc['window'][-1]} plus {doc['season']})", file=sys.stderr)
+    return None
 
 
 # ---------------------------------------------------------------- main
@@ -511,26 +706,33 @@ def build(season: int, previous: list[dict], prev_meta: dict, get=http_get) -> t
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", default="data/players.json")
+    ap.add_argument("--teams-out", default="data/teams.json")
     ap.add_argument("--season", type=int, default=season_start(dt.date.today()),
                     help="season start year, e.g. 2026 for 2026-27")
     a = ap.parse_args()
     out = Path(a.out)
     previous, prev_meta = load_previous(out, a.season)
     rows, meta, problems = build(a.season, previous, prev_meta)
-    if not rows:
-        print("No data for any league; leaving the existing file alone.", file=sys.stderr)
-        return 1
-    rows.sort(key=lambda r: (r["league"], r["team"], -r["minutes"]))
-    doc = {
-        "season": season_label(a.season),
-        "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
-        "leagues": meta,
-        "fields": FIELDS,
-        "rows": [[r.get(f) for f in FIELDS] for r in rows],
-    }
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), "utf-8")
-    print(f"Wrote {len(rows)} players to {out}", file=sys.stderr)
+    if rows:
+        rows.sort(key=lambda r: (r["league"], r["team"], -r["minutes"]))
+        doc = {
+            "season": season_label(a.season),
+            "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
+            "leagues": meta,
+            "fields": FIELDS,
+            "rows": [[r.get(f) for f in FIELDS] for r in rows],
+        }
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), "utf-8")
+        print(f"Wrote {len(rows)} players to {out}", file=sys.stderr)
+    else:
+        print("No player data for any league; leaving the existing file alone.", file=sys.stderr)
+        problems.append("Players: no data for any league")
+
+    team_problem = refresh_teams(a.season, Path(a.teams_out))
+    if team_problem:
+        problems.append(team_problem)
+
     if problems:
         print("\nProblems:\n  " + "\n  ".join(problems), file=sys.stderr)
         return 1
