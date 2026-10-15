@@ -15,7 +15,7 @@ def us_player(i, name, team, minutes=450, games=5, pos="F S"):
             "team_title": team, "npg": "2", "npxG": "1.83", "xGChain": "2.1", "xGBuildup": "0.4"}
 
 
-def league(n_teams, per_team=10):
+def league(n_teams, per_team=12):
     return [us_player(t * 100 + k, f"Player {t}-{k}", f"Team {t}") for t in range(n_teams) for k in range(per_team)]
 
 
@@ -66,6 +66,30 @@ class ParseUnderstat(unittest.TestCase):
     def test_team_names_match_predictor(self):
         r = rd.understat_rows([us_player(1, "A", "Manchester United")], "Premier League")[0]
         self.assertEqual(r["team"], "Man United")
+
+
+class Clubs(unittest.TestCase):
+    def test_recording_error_goes_to_the_thinner_squad(self):
+        # 15 PSG players also credited to Rennes, which has its own 20 players
+        players = ([us_player(i, f"PSG {i}", "Paris Saint Germain,Rennes") for i in range(15)] +
+                   [us_player(100 + i, f"PSG solo {i}", "Paris Saint Germain") for i in range(6)] +
+                   [us_player(200 + i, f"Rennes {i}", "Rennes") for i in range(20)])
+        rows = rd.understat_rows(players, "Ligue 1")
+        teams = {r["name"]: r["team"] for r in rows}
+        self.assertEqual(teams["PSG 3"], "Paris Saint Germain")
+        self.assertEqual(teams["Rennes 3"], "Rennes")
+
+    def test_single_transfer_uses_last_club(self):
+        rows = rd.understat_rows([us_player(1, "A B", "Fulham,Everton")] +
+                                 [us_player(i, f"F {i}", "Fulham") for i in range(2, 20)], "Premier League")
+        self.assertEqual(rows[0]["team"], "Everton")
+
+    def test_oversized_squad_fails(self):
+        rows = rd.understat_rows(league(18), "Ligue 1")
+        for r in rows[:15]:
+            r["team"] = "Team 1"   # 15 extra players on one club
+        with self.assertRaises(rd.LeagueError):
+            rd.check_league(rows, "Ligue 1", 18, [])
 
 
 class Names(unittest.TestCase):
@@ -253,3 +277,82 @@ class Build(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------- team results
+
+def season_fixtures(clubs, score=(2, 1)):
+    """Every club plays every other home and away: 380 matches for 20 clubs."""
+    return [(h, score[0], score[1], a) for h in clubs for a in clubs if h != a]
+
+
+class TeamResults(unittest.TestCase):
+    def test_tally(self):
+        t = rd.tally([("A", 2, 1, "B"), ("B", 0, 0, "A")])
+        self.assertEqual(t["A"], [2, 1, 1, 0, 2, 1])
+        self.assertEqual(t["B"], [2, 0, 1, 1, 1, 2])
+
+    def test_reads_archive_fixtures(self):
+        files = {
+            "teams.csv": "id,name\n1,Man Utd\n2,Spurs\n",
+            "fixtures.csv": "finished,team_h,team_h_score,team_a,team_a_score\n"
+                            "True,1,2.0,2,1.0\nFalse,2,,1,\n",
+        }
+        res, clubs = rd.results_vaastav(2021, lambda url, headers=None: files[url.rsplit("/", 1)[1]])
+        self.assertEqual(res, [("Man United", 2, 1, "Tottenham")])
+        self.assertEqual(clubs, {"Man United", "Tottenham"})
+
+    def test_reads_gameweek_files_and_skips_missing_ones(self):
+        def get(url, headers=None):
+            if url.endswith("teams.csv"):
+                return "code,name\n3,Arsenal\n9,Coventry City\n"
+            if "GW1/" in url or "GW2/" in url:  # GW2 repeats GW1's match: counted once
+                return ("gameweek,home_team,home_score,away_score,away_team,finished,tournament\n"
+                        "1,3.0,3.0,0.0,9.0,True,prem\n1,9.0,,,3.0,False,prem\n")
+            raise rd.LeagueError("404")
+        res, clubs = rd.results_core(2026, get)
+        self.assertEqual(res, [("Arsenal", 3, 0, "Coventry")])
+        self.assertEqual(clubs, {"Arsenal", "Coventry"})
+
+    def fake_league(self, current_matches=60, previous=None):
+        clubs = {y: [f"Club {y}-{i}" if i < 3 else f"Club {i}" for i in range(20)] for y in range(2020, 2027)}
+
+        def results(fetch_name):
+            def fetch(year, get=None):
+                if year == 2026:
+                    return season_fixtures(clubs[year])[:current_matches], set(clubs[year])
+                return season_fixtures(clubs[year]), set(clubs[year])
+            return fetch
+        orig = rd.results_vaastav, rd.results_core
+        rd.results_vaastav, rd.results_core = results("v"), results("c")
+        try:
+            return rd.build_teams(2026, previous)
+        finally:
+            rd.results_vaastav, rd.results_core = orig
+
+    def test_build_teams(self):
+        d = self.fake_league()
+        self.assertEqual(d["window"], ["2021-22", "2022-23", "2023-24", "2024-25", "2025-26"])
+        self.assertEqual(d["matches_this_season"], 60)
+        self.assertEqual(d["promoted"]["teams"], 15)        # 3 new clubs in each of 5 seasons
+        self.assertAlmostEqual(d["promoted"]["gf"], 1.5)    # every match 2-1, so 1.5 goals each side
+        regular = next(t for t in d["teams"] if t["name"] == "Club 10")
+        self.assertEqual(regular["seasons"], 5)
+        self.assertEqual(regular["past"][0], 190)
+        new = next(t for t in d["teams"] if t["name"] == "Club 2026-0")
+        self.assertEqual((new["seasons"], new["in_league"]), (0, True))
+
+    def test_fewer_matches_than_last_run_fails(self):
+        before = self.fake_league(current_matches=60)
+        with self.assertRaises(rd.LeagueError):
+            self.fake_league(current_matches=50, previous=before)
+
+    def test_incomplete_past_season_fails(self):
+        orig = rd.season_results
+        rd.season_results = lambda year, complete, get=None: (season_fixtures([f"C{i}" for i in range(20)])[:300],
+                                                               {f"C{i}" for i in range(20)})
+        try:
+            with self.assertRaises(rd.LeagueError):
+                rd.build_teams(2026, None)
+        finally:
+            rd.season_results = orig
