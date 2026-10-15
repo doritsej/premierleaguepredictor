@@ -204,7 +204,39 @@ def fetch_understat(code: str, season: int, get=http_get) -> list:
     raise LeagueError("; ".join(errors))
 
 
-def understat_rows(players: list, league: str, tm: "TMIndex | None" = None) -> list[dict]:
+def fetch_player_matches(player_id: str, get=http_get) -> list:
+    """A player's match list from Understat (JSON endpoint, or the older embedded page)."""
+    page_url = f"https://understat.com/player/{player_id}"
+    try:
+        data = json.loads(get(f"https://understat.com/getPlayerData/{player_id}",
+                              {"X-Requested-With": "XMLHttpRequest", "Referer": page_url}))
+        matches = (data.get("matches") or data.get("matchesData")) if isinstance(data, dict) else None
+        if matches:
+            return list(matches.values()) if isinstance(matches, dict) else matches
+    except Exception:  # noqa: BLE001 - fall through to the page
+        pass
+    return parse_embedded(get(page_url), "matchesData")
+
+
+def club_from_matches(matches: list, candidates: tuple, season: int) -> str | None:
+    """The club in the player's latest match this season that involves only one of the candidates.
+
+    Each match lists both teams. A player's own club is in every one of his matches, so the
+    latest match where just one candidate appears names his current club.
+    """
+    def when(m):
+        return str(m.get("date") or "")
+    this_season = [m for m in matches
+                   if str(m.get("season", season)) == str(season) or when(m) >= f"{season}-07-01"]
+    for m in sorted(this_season, key=when, reverse=True):
+        teams = {team_name(html.unescape(str(m.get(k) or ""))) for k in ("h_team", "a_team")}
+        present = [c for c in candidates if c in teams]
+        if len(present) == 1:
+            return present[0]
+    return None
+
+
+def understat_rows(players: list, league: str, tm: "TMIndex | None" = None, history=None) -> list[dict]:
     rows = []
     for p in players:
         minutes = num(p.get("time"), int) or 0
@@ -216,6 +248,7 @@ def understat_rows(players: list, league: str, tm: "TMIndex | None" = None) -> l
             "name": html.unescape(p.get("player_name", "")).strip(),
             "team": teams[-1] if teams else "",  # settled by resolve_clubs() below
             "_teams": teams,
+            "_id": str(p.get("id") or ""),
             "league": league,
             "pos": {"GK": "G", "D": "D", "M": "M", "F": "F"}.get(pos[0] if pos else "", None),
             "age": None,
@@ -232,18 +265,21 @@ def understat_rows(players: list, league: str, tm: "TMIndex | None" = None) -> l
             "tackles": None, "cbi": None, "recoveries": None,
             "saves": None, "clean_sheets": None, "goals_conceded": None,
         })
-    resolve_clubs(rows, tm)
+    resolve_clubs(rows, tm, history)
     return rows
 
 
-def resolve_clubs(rows: list[dict], tm: "TMIndex | None" = None) -> list[str]:
+def resolve_clubs(rows: list[dict], tm: "TMIndex | None" = None, history=None) -> list[str]:
     """Pick one club for players Understat lists with several this season.
 
-    A genuine mid-season transfer involves one or two players. When several players share
-    the same list of clubs, it's a recording error on Understat's side: a match credited to
-    both clubs for everyone who played in it. Those players are split one by one using
-    their Transfermarkt club; anyone it can't place goes to whichever listed club has the
-    smaller squad so far. Returns notes for the run log.
+    Each player is placed by, in order:
+      1. his own match history on Understat: the club in his latest match that involves
+         only one of the listed clubs (history is a function: (row, clubs) -> club or None);
+      2. for a group of several players sharing the same clubs (a match credited to both
+         clubs for everyone in it), his Transfermarkt club;
+      3. for such a group, whichever listed club has the smaller squad so far; for one or
+         two players, a real transfer, the last club listed.
+    Returns notes for the run log.
     """
     squad: dict[str, int] = {}
     groups: dict[tuple, list] = {}
@@ -255,17 +291,26 @@ def resolve_clubs(rows: list[dict], tm: "TMIndex | None" = None) -> list[str]:
             groups.setdefault(tuple(ts), []).append(r)
     notes = []
     for ts, members in groups.items():
-        if len(members) < MULTI_CLUB_GROUP:
-            for r in members:
-                r["team"] = ts[-1]
-            n = len(members)
-            notes.append(f"{n} player{'s' if n > 1 else ''} listed at {' + '.join(ts)}: "
-                         f"treated as a transfer to {ts[-1]} (check this)")
-            continue
+        error_group = len(members) >= MULTI_CLUB_GROUP
+        how = {"match history": 0, "Transfermarkt": 0, "squad size": 0, "last club listed": 0}
         unplaced = []
         for r in members:
-            hit = tm.find({**r, "team": ""}) if tm else None
-            club = next((t for t in ts if hit and same_club(hit["club"], t)), None)
+            club = None
+            if history:
+                try:
+                    club = history(r, ts)
+                except Exception:  # noqa: BLE001
+                    club = None
+                if club:
+                    how["match history"] += 1
+            if not club and error_group and tm:
+                hit = tm.find({**r, "team": ""})
+                club = next((t for t in ts if hit and same_club(hit["club"], t)), None)
+                if club:
+                    how["Transfermarkt"] += 1
+            if not club and not error_group:
+                club = ts[-1]
+                how["last club listed"] += 1
             if club:
                 r["team"] = club
                 squad[club] = squad.get(club, 0) + 1
@@ -275,9 +320,13 @@ def resolve_clubs(rows: list[dict], tm: "TMIndex | None" = None) -> list[str]:
             club = min(ts, key=lambda t: squad.get(t, 0))
             r["team"] = club
             squad[club] = squad.get(club, 0) + 1
+            how["squad size"] += 1
+        n = len(members)
         split = ", ".join(f"{sum(1 for r in members if r['team'] == t)} to {t}" for t in ts)
-        notes.append(f"{len(members)} players listed at {' + '.join(ts)}: looks like a recording error; "
-                     f"split {split}" + (f" ({len(unplaced)} placed by squad size)" if unplaced else ""))
+        by = ", ".join(f"{v} by {k}" for k, v in how.items() if v)
+        label = "looks like a recording error" if error_group else ("transfer" if n == 1 else "transfers")
+        flag = " (check this)" if how["squad size"] or how["last club listed"] else ""
+        notes.append(f"{n} player{'s' if n > 1 else ''} listed at {' + '.join(ts)}: {label}; {split} ({by}){flag}")
     for line in notes:
         print(f"  {line}", file=sys.stderr)
     return notes
@@ -357,7 +406,8 @@ def merge_fpl(us_rows: list[dict], fpl_rows: list[dict]) -> tuple[list[dict], in
         by_team.setdefault(norm(f["team"]), []).append(f)
     matched = 0
     for r in us_rows:
-        cands = by_team.get(norm(r["team"]), [])
+        clubs = r.get("_teams") or [r["team"]]
+        cands = [f for t in dict.fromkeys(clubs + [r["team"]]) for f in by_team.get(norm(t), [])]
         un = norm(r["name"])
         toks = un.split()
         hit = None
@@ -376,6 +426,10 @@ def merge_fpl(us_rows: list[dict], fpl_rows: list[dict]) -> tuple[list[dict], in
             for k in FPL_EXTRAS:
                 r[k] = hit[k]
             r["pos"] = hit["pos"] or r["pos"]
+            if hit["team"] and hit["team"] != r["team"]:  # FPL always has the current club
+                print(f"  {r['name']}: club set to {hit['team']} from Fantasy Premier League "
+                      f"(Understat had {r['team']})", file=sys.stderr)
+                r["team"] = hit["team"]
     return us_rows, matched
 
 
@@ -680,7 +734,19 @@ def build(season: int, previous: list[dict], prev_meta: dict, get=http_get) -> t
         try:
             source = "understat"
             try:
-                lr = understat_rows(fetch_understat(code, season, get), league, tm_index)
+                def history(row, clubs, _state={"fails": 0, "ok": 0}):
+                    # stop asking after three failures in a row with no success, so a blocked
+                    # player page can't stall the run
+                    if not row["_id"] or (_state["fails"] >= 3 and not _state["ok"]):
+                        return None
+                    try:
+                        club = club_from_matches(fetch_player_matches(row["_id"], get), clubs, season)
+                    except Exception:  # noqa: BLE001
+                        _state["fails"] += 1
+                        return None
+                    _state["ok"] += 1
+                    return club
+                lr = understat_rows(fetch_understat(code, season, get), league, tm_index, history)
             except LeagueError as e:
                 if league != "Premier League":
                     raise
