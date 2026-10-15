@@ -52,7 +52,7 @@ The two most likely causes:
 
 ## Players listed at two clubs
 
-Understat lists every club a player has played for this season. When several players share the same pair of clubs, it's almost always a match recorded against the wrong club, so the script keeps them at whichever club has the thinner squad otherwise, and prints a line saying so. When only one or two players share a pair, it's treated as a real mid-season transfer and the last club listed is used; the run log says "check this" so you can confirm the first time it happens (usually in January).
+Understat lists every club a player has played for this season. When several players share the same pair of clubs, it's a match recorded against both clubs for everyone who played in it. The script splits that group player by player using each player's Transfermarkt club, and anyone it can't place (such as a summer signing) goes to whichever club has the smaller squad so far. The run log prints how the group was split. When only one or two players share a pair, it's treated as a real transfer and the last club listed is used; the run log says "check this" so you can confirm it.
 
 ## Known gaps
 
