@@ -52,7 +52,14 @@ The two most likely causes:
 
 ## Players listed at two clubs
 
-Understat lists every club a player has played for this season. When several players share the same pair of clubs, it's a match recorded against both clubs for everyone who played in it. The script splits that group player by player using each player's Transfermarkt club, and anyone it can't place (such as a summer signing) goes to whichever club has the smaller squad so far. The run log prints how the group was split. When only one or two players share a pair, it's treated as a real transfer and the last club listed is used; the run log says "check this" so you can confirm it.
+Understat lists every club a player has played for this season. Sometimes that's a real transfer; sometimes it's a match recorded against both clubs for everyone who played in it (this happened with PSG and Rennes in October 2026). Each such player is placed by, in order:
+
+1. **Fantasy Premier League**, for Premier League players: it always has the current club.
+2. **The player's own match history on Understat**: the club in his latest match that involves only one of the listed clubs.
+3. **Transfermarkt's club**, when several players share the same pair of clubs.
+4. **Squad size** (for a group) or **the last club listed** (for one or two players), as a last resort. These are marked "check this" in the run log.
+
+The run log prints a line for every player or group, saying how they were placed.
 
 ## Known gaps
 
