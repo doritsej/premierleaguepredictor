@@ -204,7 +204,7 @@ def fetch_understat(code: str, season: int, get=http_get) -> list:
     raise LeagueError("; ".join(errors))
 
 
-def understat_rows(players: list, league: str) -> list[dict]:
+def understat_rows(players: list, league: str, tm: "TMIndex | None" = None) -> list[dict]:
     rows = []
     for p in players:
         minutes = num(p.get("time"), int) or 0
@@ -232,38 +232,52 @@ def understat_rows(players: list, league: str) -> list[dict]:
             "tackles": None, "cbi": None, "recoveries": None,
             "saves": None, "clean_sheets": None, "goals_conceded": None,
         })
-    resolve_clubs(rows)
+    resolve_clubs(rows, tm)
     return rows
 
 
-def resolve_clubs(rows: list[dict]) -> list[str]:
+def resolve_clubs(rows: list[dict], tm: "TMIndex | None" = None) -> list[str]:
     """Pick one club for players Understat lists with several this season.
 
     A genuine mid-season transfer involves one or two players. When several players share
-    the same list of clubs, it's a recording error on Understat's side (a match credited to
-    the wrong club), so those players go to whichever listed club has the thinner squad
-    otherwise. Returns notes for the run log.
+    the same list of clubs, it's a recording error on Understat's side: a match credited to
+    both clubs for everyone who played in it. Those players are split one by one using
+    their Transfermarkt club; anyone it can't place goes to whichever listed club has the
+    smaller squad so far. Returns notes for the run log.
     """
-    single: dict[str, int] = {}
-    groups: dict[tuple, int] = {}
+    squad: dict[str, int] = {}
+    groups: dict[tuple, list] = {}
     for r in rows:
         ts = r["_teams"]
         if len(ts) == 1:
-            single[ts[0]] = single.get(ts[0], 0) + 1
+            squad[ts[0]] = squad.get(ts[0], 0) + 1
         elif len(ts) > 1:
-            groups[tuple(ts)] = groups.get(tuple(ts), 0) + 1
+            groups.setdefault(tuple(ts), []).append(r)
     notes = []
-    for ts, n in groups.items():
-        if n >= MULTI_CLUB_GROUP:
-            club = min(ts, key=lambda t: single.get(t, 0))
-            notes.append(f"{n} players listed at {' + '.join(ts)}: looks like a recording error, kept at {club}")
-        else:
-            club = ts[-1]
+    for ts, members in groups.items():
+        if len(members) < MULTI_CLUB_GROUP:
+            for r in members:
+                r["team"] = ts[-1]
+            n = len(members)
             notes.append(f"{n} player{'s' if n > 1 else ''} listed at {' + '.join(ts)}: "
-                         f"treated as a transfer to {club} (check this)")
-        for r in rows:
-            if tuple(r["_teams"]) == ts:
+                         f"treated as a transfer to {ts[-1]} (check this)")
+            continue
+        unplaced = []
+        for r in members:
+            hit = tm.find({**r, "team": ""}) if tm else None
+            club = next((t for t in ts if hit and same_club(hit["club"], t)), None)
+            if club:
                 r["team"] = club
+                squad[club] = squad.get(club, 0) + 1
+            else:
+                unplaced.append(r)
+        for r in unplaced:
+            club = min(ts, key=lambda t: squad.get(t, 0))
+            r["team"] = club
+            squad[club] = squad.get(club, 0) + 1
+        split = ", ".join(f"{sum(1 for r in members if r['team'] == t)} to {t}" for t in ts)
+        notes.append(f"{len(members)} players listed at {' + '.join(ts)}: looks like a recording error; "
+                     f"split {split}" + (f" ({len(unplaced)} placed by squad size)" if unplaced else ""))
     for line in notes:
         print(f"  {line}", file=sys.stderr)
     return notes
@@ -414,28 +428,46 @@ def pick_player(cands: list[dict], row: dict) -> dict | None:
     return same_club[0] if len(same_club) == 1 else None
 
 
-def add_ages(rows: list[dict], tm: list[dict], season: int, today: dt.date | None = None) -> dict[str, int]:
+class TMIndex:
+    """Look up Transfermarkt players by name (birth date and July 2026 club)."""
+
+    def __init__(self, tm: list[dict], season: int):
+        self.by_name: dict[str, list] = {}
+        self.by_last: dict[str, list] = {}
+        for p in tm:
+            if p["last_season"] < season - 3:  # skip retired namesakes
+                continue
+            for key in {norm(p["name"]), norm(f"{p['first']} {p['last']}")}:
+                if key:
+                    self.by_name.setdefault(key, []).append(p)
+            last = norm(p["last"]).split()
+            if last:
+                self.by_last.setdefault(last[-1], []).append(p)
+
+    def find(self, row: dict) -> dict | None:
+        un = norm(row["name"])
+        hit = pick_player(self.by_name.get(un, []), row)
+        toks = un.split()
+        if not hit and len(toks) >= 2:  # e.g. "Vini Jr" style differences: surname + first initial
+            hit = pick_player([p for p in self.by_last.get(toks[-1], []) if norm(p["first"])[:1] == toks[0][:1]], row)
+        return hit
+
+
+def same_club(a: str, b: str) -> bool:
+    """'Stade Rennais Football Club' ~ 'Rennes', 'Paris Saint-Germain FC' ~ 'Paris Saint Germain'."""
+    wa, wb = club_words(a), club_words(b)
+    return any(x[:4] == y[:4] for x in wa for y in wb)
+
+
+def add_ages(rows: list[dict], tm, season: int, today: dt.date | None = None) -> dict[str, int]:
     """Fill in missing ages. Returns how many were filled per league."""
     today = today or dt.date.today()
-    recent = [p for p in tm if p["last_season"] >= season - 3]  # skip retired namesakes
-    by_name: dict[str, list] = {}
-    by_last: dict[str, list] = {}
-    for p in recent:
-        for key in {norm(p["name"]), norm(f"{p['first']} {p['last']}")}:
-            if key:
-                by_name.setdefault(key, []).append(p)
-        last = norm(p["last"]).split()
-        if last:
-            by_last.setdefault(last[-1], []).append(p)
+    index = tm if isinstance(tm, TMIndex) else TMIndex(tm, season)
     filled: dict[str, int] = {}
     for r in rows:
         if r.get("age") is not None:
             continue
-        un = norm(r["name"])
-        hit = pick_player(by_name.get(un, []), r)
-        toks = un.split()
-        if not hit and len(toks) >= 2:  # e.g. "Vini Jr" style differences: surname + first initial
-            hit = pick_player([p for p in by_last.get(toks[-1], []) if norm(p["first"])[:1] == toks[0][:1]], r)
+        hit = index.find(r)
         if hit:
             r["age"] = age_on(hit["dob"], today)
             filled[r["league"]] = filled.get(r["league"], 0) + 1
@@ -638,12 +670,17 @@ def build(season: int, previous: list[dict], prev_meta: dict, get=http_get) -> t
     today = dt.date.today().isoformat()
     rows, meta, problems = [], {}, []
     fpl = None
+    try:  # birth dates and clubs: used to place players listed at two clubs, and for missing ages
+        tm_index = TMIndex(fetch_transfermarkt(get), season)
+    except Exception as e:  # noqa: BLE001 - nice to have; never fail the run over it
+        print(f"Transfermarkt list unavailable ({e}); carrying on without it", file=sys.stderr)
+        tm_index = None
     for code, (league, n_teams) in LEAGUES.items():
         print(f"{league}:", file=sys.stderr)
         try:
             source = "understat"
             try:
-                lr = understat_rows(fetch_understat(code, season, get), league)
+                lr = understat_rows(fetch_understat(code, season, get), league, tm_index)
             except LeagueError as e:
                 if league != "Premier League":
                     raise
@@ -693,7 +730,9 @@ def build(season: int, previous: list[dict], prev_meta: dict, get=http_get) -> t
     if missing:
         print("Ages:", file=sys.stderr)
         try:
-            filled = add_ages(rows, fetch_transfermarkt(get), season)
+            if tm_index is None:
+                raise LeagueError("Transfermarkt list unavailable")
+            filled = add_ages(rows, tm_index, season)
             for league in LEAGUE_NAMES:
                 n_missing = sum(1 for r in missing if r["league"] == league)
                 if n_missing:
