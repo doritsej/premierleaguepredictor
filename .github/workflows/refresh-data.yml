@@ -1,4 +1,4 @@
-name: Refresh player data
+name: Refresh data
 
 on:
   schedule:
@@ -22,7 +22,7 @@ jobs:
       - name: Run tests
         run: python -m unittest discover tests -v
 
-      - name: Fetch and check player data
+      - name: Fetch and check data
         id: refresh
         continue-on-error: true
         run: python scripts/refresh_data.py --out data/players.json
@@ -31,15 +31,15 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/players.json
+          git add data/
           if ! git diff --cached --quiet; then
-            git commit -m "Refresh player data"
+            git commit -m "Refresh data"
             git push
           fi
 
-      # Leagues that failed kept last week's rows. Mark the run as failed so GitHub emails you.
-      - name: Report failed leagues
+      # Anything that failed kept last week's data. Mark the run as failed so GitHub emails you.
+      - name: Report problems
         if: steps.refresh.outcome == 'failure'
         run: |
-          echo "::error::One or more leagues failed to refresh. See the 'Fetch and check player data' step."
+          echo "::error::Some data failed to refresh. See the 'Fetch and check data' step."
           exit 1
